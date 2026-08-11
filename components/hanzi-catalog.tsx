@@ -1236,7 +1236,7 @@ export function HanziCatalog({
                 <div className="lg:hidden overflow-x-auto pb-2 -mx-4 px-4">
                   <TabsList className="inline-flex h-auto w-auto gap-2 bg-transparent">
                     <TabsTrigger value="aulas" className="whitespace-nowrap">
-                      Aulas
+                      Básico 1
                     </TabsTrigger>
                     <TabsTrigger value="licao3" className="whitespace-nowrap">
                       Lição 3
@@ -1320,7 +1320,7 @@ export function HanziCatalog({
                 {/* Desktop sidebar - modified from existing */}
                 <TabsList className="hidden lg:flex flex-col h-auto w-full gap-1">
                   <TabsTrigger value="aulas" className="w-full justify-start">
-                    Aulas
+                    Básico 1
                   </TabsTrigger>
                   <TabsTrigger value="licao3" className="w-full justify-start">
                     Lição 3
@@ -1429,7 +1429,7 @@ export function HanziCatalog({
                 <TabsContent key={category} value={category} className="space-y-4 mt-0">
                   <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-bold capitalize">
-                      {category === "aulas" && "Aulas"}
+                      {category === "aulas" && "Básico 1"}
                       {category === "licao3" && "Lição 3 — 第三课"}
                       {category === "licao4" && "Lição 4 — 第四课"}
                       {category === "licao5" && "Lição 5 — 第五课"}
