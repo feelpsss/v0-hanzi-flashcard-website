@@ -131,6 +131,135 @@ const HANZI_CATALOG = {
     { hanzi: "欢", pinyin: "huān", meaning: "alegre, feliz" },
     { hanzi: "那", pinyin: "nà", meaning: "aquele" },
   ],
+  licao3: [
+    { hanzi: "地方", pinyin: "dìfāng", meaning: "lugar, local, sítio" },
+    { hanzi: "个", pinyin: "gè", meaning: "classificador" },
+    { hanzi: "这儿", pinyin: "zhèr", meaning: "aqui (também 这里 zhèlǐ)" },
+    { hanzi: "家", pinyin: "jiā", meaning: "família; casa" },
+    { hanzi: "有", pinyin: "yǒu", meaning: "ter, haver" },
+    { hanzi: "几", pinyin: "jǐ", meaning: "quantos, quantas" },
+    { hanzi: "口", pinyin: "kǒu", meaning: "classificador para pessoas" },
+    { hanzi: "爸爸", pinyin: "bàba", meaning: "pai" },
+    { hanzi: "妈妈", pinyin: "māma", meaning: "mãe" },
+    { hanzi: "和", pinyin: "hé", meaning: "e" },
+    { hanzi: "太太", pinyin: "tàitai", meaning: "esposa, mulher" },
+    { hanzi: "孩子", pinyin: "háizi", meaning: "criança; filho" },
+    { hanzi: "男孩儿", pinyin: "nánháir", meaning: "menino, rapaz" },
+    { hanzi: "女孩儿", pinyin: "nǚháir", meaning: "menina, rapariga" },
+    { hanzi: "多大", pinyin: "duō dà", meaning: "quantos anos" },
+    { hanzi: "两", pinyin: "liǎng", meaning: "dois" },
+    { hanzi: "岁", pinyin: "suì", meaning: "anos de idade" },
+    { hanzi: "可爱", pinyin: "kě'ài", meaning: "querido" },
+    { hanzi: "吧", pinyin: "ba", meaning: "partícula" },
+    { hanzi: "学校", pinyin: "xuéxiào", meaning: "escola, instituição de ensino" },
+    { hanzi: "多少", pinyin: "duōshao", meaning: "quanto(s)" },
+    { hanzi: "学生", pinyin: "xuéshēng", meaning: "aluno" },
+    { hanzi: "想", pinyin: "xiǎng", meaning: "pensar" },
+    { hanzi: "大概", pinyin: "dàgài", meaning: "aproximadamente, por volta de" },
+    { hanzi: "万", pinyin: "wàn", meaning: "dez mil" },
+    { hanzi: "没有", pinyin: "méiyǒu", meaning: "não há" },
+    { hanzi: "多", pinyin: "duō", meaning: "muito" },
+    { hanzi: "千", pinyin: "qiān", meaning: "mil" },
+    { hanzi: "去", pinyin: "qù", meaning: "ir" },
+    { hanzi: "为什么", pinyin: "wèishénme", meaning: "por quê?" },
+    { hanzi: "为", pinyin: "wèi", meaning: "para" },
+    { hanzi: "分公司", pinyin: "fēn gōngsī", meaning: "sucursal/filial de companhia" },
+    { hanzi: "老板", pinyin: "lǎobǎn", meaning: "patrão" },
+    { hanzi: "让", pinyin: "ràng", meaning: "deixar, permitir" },
+    { hanzi: "那儿", pinyin: "nàr", meaning: "lá, ali (também 那里 nàlǐ)" },
+    { hanzi: "百", pinyin: "bǎi", meaning: "cem, cento" },
+    { hanzi: "少", pinyin: "shǎo", meaning: "pouco" },
+    { hanzi: "因为", pinyin: "yīnwèi", meaning: "porque" },
+  ],
+  licao4: [
+    { hanzi: "地图", pinyin: "dìtú", meaning: "mapa" },
+    { hanzi: "张", pinyin: "zhāng", meaning: "classificador para folhas de papel, mapas etc." },
+    { hanzi: "中文", pinyin: "Zhōngwén", meaning: "língua chinesa, chinês" },
+    { hanzi: "葡萄牙文", pinyin: "Pútáoyáwén", meaning: "língua portuguesa, português" },
+    { hanzi: "看", pinyin: "kàn", meaning: "ver, olhar" },
+    { hanzi: "一下", pinyin: "yíxià", meaning: "um pouco; por um momento" },
+    { hanzi: "行", pinyin: "xíng", meaning: "claro que sim; está bem" },
+    { hanzi: "要", pinyin: "yào", meaning: "querer, precisar" },
+    { hanzi: "给", pinyin: "gěi", meaning: "dar" },
+    { hanzi: "干", pinyin: "gān", meaning: "fazer" },
+    { hanzi: "是的", pinyin: "shì de", meaning: "sim" },
+    { hanzi: "玩儿", pinyin: "wánr", meaning: "fazer uma viagem a; divertir-se" },
+    { hanzi: "知道", pinyin: "zhīdao", meaning: "conhecer; saber" },
+    { hanzi: "比较", pinyin: "bǐjiào", meaning: "comparativamente" },
+    { hanzi: "真", pinyin: "zhēn", meaning: "que... tão!; realmente" },
+    { hanzi: "有意思", pinyin: "yǒu yìsi", meaning: "interessante" },
+    { hanzi: "意思", pinyin: "yìsi", meaning: "interesse" },
+    { hanzi: "龙", pinyin: "lóng", meaning: "dragão" },
+    { hanzi: "山", pinyin: "shān", meaning: "montanha, monte" },
+    { hanzi: "词典", pinyin: "cídiǎn", meaning: "dicionário" },
+    { hanzi: "汉葡词典", pinyin: "Hàn-Pú cídiǎn", meaning: "dicionário chinês-português" },
+    { hanzi: "葡汉词典", pinyin: "Pú-Hàn cídiǎn", meaning: "dicionário português-chinês" },
+    { hanzi: "本", pinyin: "běn", meaning: "classificador para livros" },
+    { hanzi: "谁", pinyin: "shéi / shuí", meaning: "quem" },
+    { hanzi: "请问", pinyin: "qǐng wèn", meaning: "desculpe; para perguntar algo" },
+    { hanzi: "问", pinyin: "wèn", meaning: "perguntar" },
+    { hanzi: "对", pinyin: "duì", meaning: "correto, sim" },
+    { hanzi: "非常", pinyin: "fēicháng", meaning: "muito" },
+    { hanzi: "有用", pinyin: "yǒuyòng", meaning: "útil" },
+    { hanzi: "能", pinyin: "néng", meaning: "poder" },
+    { hanzi: "用", pinyin: "yòng", meaning: "usar" },
+    { hanzi: "当然", pinyin: "dāngrán", meaning: "certamente, com certeza" },
+    { hanzi: "书", pinyin: "shū", meaning: "livro" },
+    { hanzi: "本子", pinyin: "běnzi", meaning: "caderno" },
+    { hanzi: "笔", pinyin: "bǐ", meaning: "caneta, lápis" },
+    { hanzi: "支", pinyin: "zhī", meaning: "classificador para caneta, lápis etc." },
+    { hanzi: "教室", pinyin: "jiàoshì", meaning: "sala de aula" },
+    { hanzi: "上课", pinyin: "shàng kè", meaning: "ter aulas" },
+  ],
+  licao5: [
+    { hanzi: "小姐", pinyin: "xiǎojiě", meaning: "senhorita; empregada" },
+    { hanzi: "会", pinyin: "huì", meaning: "saber" },
+    { hanzi: "一点儿", pinyin: "yìdiǎnr", meaning: "um pouco" },
+    { hanzi: "先生", pinyin: "xiānsheng", meaning: "senhor" },
+    { hanzi: "买", pinyin: "mǎi", meaning: "comprar" },
+    { hanzi: "件", pinyin: "jiàn", meaning: "classificador para roupa" },
+    { hanzi: "衬衫", pinyin: "chènshān", meaning: "camisa" },
+    { hanzi: "白", pinyin: "bái", meaning: "branco" },
+    { hanzi: "钱", pinyin: "qián", meaning: "dinheiro" },
+    { hanzi: "块", pinyin: "kuài", meaning: "unidade de Renminbi (元 yuán)" },
+    { hanzi: "太", pinyin: "tài", meaning: "excessivamente, demais (太……了 = tão...!; 不太…… = não muito...)" },
+    { hanzi: "贵", pinyin: "guì", meaning: "caro" },
+    { hanzi: "红", pinyin: "hóng", meaning: "vermelho" },
+    { hanzi: "便宜", pinyin: "piányi", meaning: "barato" },
+    { hanzi: "还", pinyin: "hái", meaning: "ainda; também" },
+    { hanzi: "条", pinyin: "tiáo", meaning: "classificador para calças, saia, rua, rio, peixe etc." },
+    { hanzi: "裤子", pinyin: "kùzi", meaning: "calças" },
+    { hanzi: "试", pinyin: "shì", meaning: "experimentar, provar" },
+    { hanzi: "那", pinyin: "nà", meaning: "nessa situação, nesse caso" },
+    { hanzi: "来", pinyin: "lái", meaning: "vir" },
+    { hanzi: "饭店", pinyin: "fàndiàn", meaning: "restaurante" },
+    { hanzi: "最", pinyin: "zuì", meaning: "o mais" },
+    { hanzi: "好吃", pinyin: "hǎochī", meaning: "delicioso, saboroso" },
+    { hanzi: "菜", pinyin: "cài", meaning: "prato" },
+    { hanzi: "糖醋鱼", pinyin: "tángcùyú", meaning: "peixe agridoce" },
+    { hanzi: "糖", pinyin: "táng", meaning: "açúcar" },
+    { hanzi: "醋", pinyin: "cù", meaning: "vinagre" },
+    { hanzi: "鱼", pinyin: "yú", meaning: "peixe" },
+    { hanzi: "吃", pinyin: "chī", meaning: "comer" },
+    { hanzi: "辣", pinyin: "là", meaning: "picante" },
+    { hanzi: "酸辣汤", pinyin: "suānlàtāng", meaning: "sopa avinagrada e picante" },
+    { hanzi: "酸", pinyin: "suān", meaning: "ácido, avinagrado" },
+    { hanzi: "汤", pinyin: "tāng", meaning: "sopa, caldo" },
+    { hanzi: "牛肉", pinyin: "niúròu", meaning: "carne de vaca" },
+    { hanzi: "牛", pinyin: "niú", meaning: "boi, vaca" },
+    { hanzi: "肉", pinyin: "ròu", meaning: "carne" },
+    { hanzi: "红烧", pinyin: "hóngshāo", meaning: "guisado em molho de soja" },
+    { hanzi: "米饭", pinyin: "mǐfàn", meaning: "arroz cozido" },
+    { hanzi: "水饺", pinyin: "shuǐjiǎo", meaning: "ravióis chineses (também 饺子 jiǎozi)" },
+    { hanzi: "瓶", pinyin: "píng", meaning: "garrafa" },
+    { hanzi: "啤酒", pinyin: "píjiǔ", meaning: "cerveja" },
+    { hanzi: "等", pinyin: "děng", meaning: "esperar" },
+    { hanzi: "东西", pinyin: "dōngxi", meaning: "coisa" },
+    { hanzi: "买东西", pinyin: "mǎi dōngxi", meaning: "fazer compras" },
+    { hanzi: "商店", pinyin: "shāngdiàn", meaning: "loja" },
+    { hanzi: "卖", pinyin: "mài", meaning: "vender" },
+    { hanzi: "衣服", pinyin: "yīfu", meaning: "roupa, vestuário" },
+  ],
   hsk1: [
     { hanzi: "你", pinyin: "nǐ", meaning: "você" },
     { hanzi: "好", pinyin: "hǎo", meaning: "bom, bem" },
@@ -979,6 +1108,15 @@ export function HanziCatalog({
                     <TabsTrigger value="aulas" className="whitespace-nowrap">
                       Aulas
                     </TabsTrigger>
+                    <TabsTrigger value="licao3" className="whitespace-nowrap">
+                      Lição 3
+                    </TabsTrigger>
+                    <TabsTrigger value="licao4" className="whitespace-nowrap">
+                      Lição 4
+                    </TabsTrigger>
+                    <TabsTrigger value="licao5" className="whitespace-nowrap">
+                      Lição 5
+                    </TabsTrigger>
                     <TabsTrigger value="hsk1" className="whitespace-nowrap">
                       HSK 1
                     </TabsTrigger>
@@ -1036,6 +1174,15 @@ export function HanziCatalog({
                 <TabsList className="hidden lg:flex flex-col h-auto w-full gap-1">
                   <TabsTrigger value="aulas" className="w-full justify-start">
                     Aulas
+                  </TabsTrigger>
+                  <TabsTrigger value="licao3" className="w-full justify-start">
+                    Lição 3
+                  </TabsTrigger>
+                  <TabsTrigger value="licao4" className="w-full justify-start">
+                    Lição 4
+                  </TabsTrigger>
+                  <TabsTrigger value="licao5" className="w-full justify-start">
+                    Lição 5
                   </TabsTrigger>
                   <TabsTrigger value="hsk1" className="w-full justify-start">
                     HSK 1
@@ -1099,6 +1246,9 @@ export function HanziCatalog({
                   <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-bold capitalize">
                       {category === "aulas" && "Aulas"}
+                      {category === "licao3" && "Lição 3 — 第三课"}
+                      {category === "licao4" && "Lição 4 — 第四课"}
+                      {category === "licao5" && "Lição 5 — 第五课"}
                       {category === "hsk1" && "HSK Nível 1"}
                       {category === "hsk2" && "HSK Nível 2"}
                       {category === "hsk3" && "HSK Nível 3"}
