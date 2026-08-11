@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, Search, Plus, Check, X } from "lucide-react"
+import { ArrowLeft, Search, Plus, Check, X, FolderPlus, Trash2, Star } from "lucide-react"
 
 const HANZI_CATALOG = {
   aulas: [
@@ -987,6 +987,90 @@ export function HanziCatalog({
   })
   const [showSnackbar, setShowSnackbar] = useState(false) // From updates
 
+  const [customCategories, setCustomCategories] = useState<
+    { id: string; name: string; cards: any[] }[]
+  >([])
+  const [showCategoryModal, setShowCategoryModal] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState("")
+  const [categorySelection, setCategorySelection] = useState<any[]>([])
+  const [categoryModalSearch, setCategoryModalSearch] = useState("")
+  const [categoryToDelete, setCategoryToDelete] = useState<{ id: string; name: string } | null>(null)
+
+  useEffect(() => {
+    const saved = localStorage.getItem("customHanziCategories")
+    if (saved) {
+      try {
+        setCustomCategories(JSON.parse(saved))
+      } catch {
+        // ignore corrupted data
+      }
+    }
+  }, [])
+
+  const persistCustomCategories = (categories: { id: string; name: string; cards: any[] }[]) => {
+    setCustomCategories(categories)
+    localStorage.setItem("customHanziCategories", JSON.stringify(categories))
+  }
+
+  // Unique list of every character in the built-in catalog, used to pick cards for a custom category
+  const allCatalogCards = useMemo(() => {
+    const map = new Map<string, any>()
+    Object.values(HANZI_CATALOG)
+      .flat()
+      .forEach((card) => {
+        if (!map.has(card.hanzi)) map.set(card.hanzi, card)
+      })
+    return Array.from(map.values())
+  }, [])
+
+  const openCategoryModal = () => {
+    setNewCategoryName("")
+    setCategorySelection([])
+    setCategoryModalSearch("")
+    setShowCategoryModal(true)
+  }
+
+  const toggleCategorySelection = (card: any) => {
+    setCategorySelection((prev) =>
+      prev.some((c) => c.hanzi === card.hanzi)
+        ? prev.filter((c) => c.hanzi !== card.hanzi)
+        : [...prev, card],
+    )
+  }
+
+  const handleCreateCategory = () => {
+    const name = newCategoryName.trim()
+    if (!name || categorySelection.length === 0) return
+    const newCategory = {
+      id: `cat-${Date.now()}`,
+      name,
+      cards: categorySelection,
+    }
+    persistCustomCategories([...customCategories, newCategory])
+    setShowCategoryModal(false)
+    setActiveTab(`custom-${newCategory.id}`)
+  }
+
+  const handleDeleteCategory = (id: string) => {
+    const remaining = customCategories.filter((c) => c.id !== id)
+    persistCustomCategories(remaining)
+    setCategoryToDelete(null)
+    if (activeTab === `custom-${id}`) {
+      setActiveTab("aulas")
+    }
+  }
+
+  const filteredCategoryModalCards = useMemo(() => {
+    if (!categoryModalSearch) return allCatalogCards
+    const term = categoryModalSearch.toLowerCase()
+    return allCatalogCards.filter(
+      (card) =>
+        card.hanzi.includes(categoryModalSearch) ||
+        card.pinyin.toLowerCase().includes(term) ||
+        card.meaning.toLowerCase().includes(term),
+    )
+  }, [allCatalogCards, categoryModalSearch])
+
   const isAlreadyAdded = (hanzi: string) => {
     // Use existingFlashcards if onRemoveCard is provided, otherwise check against flashcards (from updates)
     const cardsToCheck = onRemoveCard ? existingFlashcards : flashcards
@@ -1012,12 +1096,15 @@ export function HanziCatalog({
     }
   }
 
-  const addAllFromCategory = (category: string) => {
-    const categoryCards = HANZI_CATALOG[category as keyof typeof HANZI_CATALOG]
+  const addAllCards = (categoryCards: any[]) => {
     const newCards = categoryCards.filter(
       (card) => !selectedCards.some((c) => c.hanzi === card.hanzi) && !isAlreadyAdded(card.hanzi),
     )
     setSelectedCards([...selectedCards, ...newCards])
+  }
+
+  const addAllFromCategory = (category: string) => {
+    addAllCards(HANZI_CATALOG[category as keyof typeof HANZI_CATALOG])
   }
 
   // Renamed from handleAddCards to handleAddToFlashcards based on updates
@@ -1047,6 +1134,49 @@ export function HanziCatalog({
         card.meaning.toLowerCase().includes(searchTerm.toLowerCase()),
     )
   }
+
+  const renderCardGrid = (cards: any[]) => (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+      {filterCards(cards).map((card) => {
+        const isSelected = selectedCards.some((c) => c.hanzi === card.hanzi)
+        const alreadyAdded = isAlreadyAdded(card.hanzi)
+        return (
+          <button
+            key={card.hanzi}
+            onClick={() => toggleCard(card)}
+            className={`
+              group relative p-4 border-2 rounded-lg transition-all hover:shadow-lg
+              ${
+                alreadyAdded
+                  ? "border-green-500 bg-green-500/20 shadow-md hover:border-red-500 hover:bg-red-500/20"
+                  : isSelected
+                    ? "border-primary bg-primary/10 shadow-md"
+                    : "border-border bg-card hover:border-primary/50"
+              }
+            `}
+          >
+            <div
+              className={`absolute top-1 right-1 rounded-full p-1 transition-colors ${
+                alreadyAdded ? "bg-green-500 text-white group-hover:bg-red-500" : "opacity-0"
+              }`}
+            >
+              <Check className="h-3 w-3 group-hover:hidden" />
+              <X className="h-3 w-3 hidden group-hover:block" />
+            </div>
+            <div className="text-4xl mb-2 text-center">{card.hanzi}</div>
+            <div className="text-sm text-muted-foreground text-center">{card.pinyin}</div>
+            <div className="text-xs text-muted-foreground text-center mt-1 text-balance">{card.meaning}</div>
+            {alreadyAdded && (
+              <div className="text-xs text-green-600 dark:text-green-400 group-hover:text-red-600 dark:group-hover:text-red-400 font-semibold text-center mt-2 transition-colors">
+                <span className="group-hover:hidden">Adicionado</span>
+                <span className="hidden group-hover:inline">Clique para remover</span>
+              </div>
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -1168,7 +1298,24 @@ export function HanziCatalog({
                     <TabsTrigger value="weather" className="whitespace-nowrap">
                       Clima
                     </TabsTrigger>
+                    {customCategories.map((category) => (
+                      <TabsTrigger
+                        key={category.id}
+                        value={`custom-${category.id}`}
+                        className="whitespace-nowrap gap-1.5"
+                      >
+                        <Star className="h-3.5 w-3.5" />
+                        {category.name}
+                      </TabsTrigger>
+                    ))}
                   </TabsList>
+                </div>
+                {/* Create category button - mobile */}
+                <div className="lg:hidden mb-2">
+                  <Button variant="outline" size="sm" onClick={openCategoryModal} className="bg-transparent">
+                    <FolderPlus className="h-4 w-4 mr-2" />
+                    Criar Categoria
+                  </Button>
                 </div>
                 {/* Desktop sidebar - modified from existing */}
                 <TabsList className="hidden lg:flex flex-col h-auto w-full gap-1">
@@ -1236,6 +1383,43 @@ export function HanziCatalog({
                     Clima
                   </TabsTrigger>
                 </TabsList>
+
+                {/* Custom categories - desktop */}
+                <div className="hidden lg:block mt-6">
+                  <div className="flex items-center gap-2 mb-2 px-1">
+                    <Star className="h-4 w-4 text-primary" />
+                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                      Minhas Categorias
+                    </h3>
+                  </div>
+                  {customCategories.length > 0 ? (
+                    <TabsList className="flex flex-col h-auto w-full gap-1 bg-transparent p-0">
+                      {customCategories.map((category) => (
+                        <TabsTrigger
+                          key={category.id}
+                          value={`custom-${category.id}`}
+                          className="w-full justify-start gap-2"
+                        >
+                          <Star className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{category.name}</span>
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  ) : (
+                    <p className="text-xs text-muted-foreground px-1 mb-2">
+                      Nenhuma categoria criada ainda.
+                    </p>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={openCategoryModal}
+                    className="w-full justify-start mt-2 bg-transparent"
+                  >
+                    <FolderPlus className="h-4 w-4 mr-2" />
+                    Criar Categoria
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -1272,48 +1456,38 @@ export function HanziCatalog({
                     </Button>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {filterCards(cards).map((card) => {
-                      const isSelected = selectedCards.some((c) => c.hanzi === card.hanzi)
-                      const alreadyAdded = isAlreadyAdded(card.hanzi)
-                      return (
-                        <button
-                          key={card.hanzi}
-                          onClick={() => toggleCard(card)}
-                          className={`
-                            group relative p-4 border-2 rounded-lg transition-all hover:shadow-lg
-                            ${
-                              alreadyAdded
-                                ? "border-green-500 bg-green-500/20 shadow-md hover:border-red-500 hover:bg-red-500/20"
-                                : isSelected
-                                  ? "border-primary bg-primary/10 shadow-md"
-                                  : "border-border bg-card hover:border-primary/50"
-                            }
-                          `}
-                        >
-                          <div
-                            className={`absolute top-1 right-1 rounded-full p-1 transition-colors ${
-                              alreadyAdded ? "bg-green-500 text-white group-hover:bg-red-500" : "opacity-0"
-                            }`}
-                          >
-                            <Check className="h-3 w-3 group-hover:hidden" />
-                            <X className="h-3 w-3 hidden group-hover:block" />
-                          </div>
-                          <div className="text-4xl mb-2 text-center">{card.hanzi}</div>
-                          <div className="text-sm text-muted-foreground text-center">{card.pinyin}</div>
-                          <div className="text-xs text-muted-foreground text-center mt-1 text-balance">
-                            {card.meaning}
-                          </div>
-                          {alreadyAdded && (
-                            <div className="text-xs text-green-600 dark:text-green-400 group-hover:text-red-600 dark:group-hover:text-red-400 font-semibold text-center mt-2 transition-colors">
-                              <span className="group-hover:hidden">Adicionado</span>
-                              <span className="hidden group-hover:inline">Clique para remover</span>
-                            </div>
-                          )}
-                        </button>
-                      )
-                    })}
+                  {renderCardGrid(cards)}
+                </TabsContent>
+              ))}
+
+              {/* Custom categories content */}
+              {customCategories.map((category) => (
+                <TabsContent key={category.id} value={`custom-${category.id}`} className="space-y-4 mt-0">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Star className="h-5 w-5 text-primary shrink-0" />
+                      <h2 className="text-2xl font-bold truncate">{category.name}</h2>
+                      <Badge variant="secondary" className="shrink-0">
+                        {category.cards.length}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button variant="outline" onClick={() => addAllCards(category.cards)}>
+                        Adicionar Todos
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setCategoryToDelete({ id: category.id, name: category.name })}
+                        aria-label={`Excluir categoria ${category.name}`}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </Button>
+                    </div>
                   </div>
+
+                  {renderCardGrid(category.cards)}
                 </TabsContent>
               ))}
             </div>
@@ -1333,6 +1507,124 @@ export function HanziCatalog({
           Adicionar ({selectedCards.length})
         </Button>
       </div>
+
+      {/* Create custom category modal */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card border-2 border-border rounded-xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-border">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <FolderPlus className="h-5 w-5 text-primary" />
+                  <h3 className="text-xl font-bold">Nova Categoria</h3>
+                </div>
+                <button
+                  onClick={() => setShowCategoryModal(false)}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Fechar"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <label className="text-sm font-medium mb-1.5 block" htmlFor="category-name">
+                Nome da categoria
+              </label>
+              <Input
+                id="category-name"
+                placeholder="Ex.: Meu vocabulário, Revisão da prova..."
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                className="mb-4"
+              />
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium" htmlFor="category-search">
+                  Selecione os caracteres
+                </label>
+                <Badge variant="secondary">{categorySelection.length} selecionados</Badge>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="category-search"
+                  placeholder="Buscar por hanzi, pinyin ou significado..."
+                  value={categoryModalSearch}
+                  onChange={(e) => setCategoryModalSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                {filteredCategoryModalCards.map((card) => {
+                  const isSelected = categorySelection.some((c) => c.hanzi === card.hanzi)
+                  return (
+                    <button
+                      key={card.hanzi}
+                      onClick={() => toggleCategorySelection(card)}
+                      className={`relative p-2 border-2 rounded-lg transition-all text-center ${
+                        isSelected
+                          ? "border-primary bg-primary/10 shadow-sm"
+                          : "border-border bg-card hover:border-primary/50"
+                      }`}
+                    >
+                      {isSelected && (
+                        <div className="absolute top-1 right-1 rounded-full bg-primary text-primary-foreground p-0.5">
+                          <Check className="h-3 w-3" />
+                        </div>
+                      )}
+                      <div className="text-2xl">{card.hanzi}</div>
+                      <div className="text-xs text-muted-foreground truncate">{card.pinyin}</div>
+                    </button>
+                  )
+                })}
+              </div>
+              {filteredCategoryModalCards.length === 0 && (
+                <p className="text-center text-sm text-muted-foreground py-8">
+                  Nenhum caractere encontrado para a busca.
+                </p>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-border flex gap-3">
+              <Button variant="outline" onClick={() => setShowCategoryModal(false)} className="flex-1 bg-transparent">
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleCreateCategory}
+                disabled={!newCategoryName.trim() || categorySelection.length === 0}
+                className="flex-1"
+              >
+                <FolderPlus className="h-4 w-4 mr-2" />
+                Criar Categoria
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete custom category confirmation */}
+      {categoryToDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card border-2 border-border rounded-xl p-8 max-w-md w-full shadow-2xl">
+            <h3 className="text-2xl font-semibold mb-4">Excluir Categoria</h3>
+            <p className="text-muted-foreground mb-2">
+              Tem certeza que deseja excluir a categoria &quot;{categoryToDelete.name}&quot;?
+            </p>
+            <p className="text-sm text-muted-foreground mb-6">
+              Os flashcards já adicionados aos seus estudos não serão removidos.
+            </p>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setCategoryToDelete(null)} className="flex-1 bg-transparent">
+                Cancelar
+              </Button>
+              <Button variant="destructive" onClick={() => handleDeleteCategory(categoryToDelete.id)} className="flex-1">
+                Excluir
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
