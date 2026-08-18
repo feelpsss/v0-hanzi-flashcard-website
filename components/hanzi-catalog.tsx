@@ -783,7 +783,7 @@ const HANZI_CATALOG = {
     { hanzi: "抱", pinyin: "bào", meaning: "abraçar" },
     { hanzi: "摸", pinyin: "mō", meaning: "tocar, sentir" },
     { hanzi: "碰", pinyin: "pèng", meaning: "tocar, bater" },
-    { hanzi: "撞", pinyin: "zhuàng", meaning: "colidir" },
+    { hanzi: "���", pinyin: "zhuàng", meaning: "colidir" },
     { hanzi: "打", pinyin: "dǎ", meaning: "bater, jogar" },
     { hanzi: "踢", pinyin: "tī", meaning: "chutar" },
     { hanzi: "扔", pinyin: "rēng", meaning: "jogar fora" },
@@ -1317,6 +1317,43 @@ export function HanziCatalog({
                     Criar Categoria
                   </Button>
                 </div>
+                {/* Custom categories - desktop */}
+                <div className="hidden lg:block mb-6">
+                  <div className="flex items-center gap-2 mb-2 px-1">
+                    <Star className="h-4 w-4 text-primary" />
+                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                      Minhas Categorias
+                    </h3>
+                  </div>
+                  {customCategories.length > 0 ? (
+                    <TabsList className="flex flex-col h-auto w-full gap-1 bg-transparent p-0">
+                      {customCategories.map((category) => (
+                        <TabsTrigger
+                          key={category.id}
+                          value={`custom-${category.id}`}
+                          className="w-full justify-start gap-2"
+                        >
+                          <Star className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{category.name}</span>
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  ) : (
+                    <p className="text-xs text-muted-foreground px-1 mb-2">
+                      Nenhuma categoria criada ainda.
+                    </p>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={openCategoryModal}
+                    className="w-full justify-start mt-2 bg-transparent"
+                  >
+                    <FolderPlus className="h-4 w-4 mr-2" />
+                    Criar Categoria
+                  </Button>
+                </div>
+
                 {/* Desktop sidebar - modified from existing */}
                 <TabsList className="hidden lg:flex flex-col h-auto w-full gap-1">
                   <TabsTrigger value="aulas" className="w-full justify-start">
@@ -1384,42 +1421,6 @@ export function HanziCatalog({
                   </TabsTrigger>
                 </TabsList>
 
-                {/* Custom categories - desktop */}
-                <div className="hidden lg:block mt-6">
-                  <div className="flex items-center gap-2 mb-2 px-1">
-                    <Star className="h-4 w-4 text-primary" />
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                      Minhas Categorias
-                    </h3>
-                  </div>
-                  {customCategories.length > 0 ? (
-                    <TabsList className="flex flex-col h-auto w-full gap-1 bg-transparent p-0">
-                      {customCategories.map((category) => (
-                        <TabsTrigger
-                          key={category.id}
-                          value={`custom-${category.id}`}
-                          className="w-full justify-start gap-2"
-                        >
-                          <Star className="h-3.5 w-3.5 shrink-0" />
-                          <span className="truncate">{category.name}</span>
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                  ) : (
-                    <p className="text-xs text-muted-foreground px-1 mb-2">
-                      Nenhuma categoria criada ainda.
-                    </p>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={openCategoryModal}
-                    className="w-full justify-start mt-2 bg-transparent"
-                  >
-                    <FolderPlus className="h-4 w-4 mr-2" />
-                    Criar Categoria
-                  </Button>
-                </div>
               </div>
             </div>
 
