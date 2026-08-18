@@ -11,9 +11,10 @@ interface StudyModeProps {
   onComplete: (results: any) => void
   onBack: () => void
   darkMode: boolean
+  studyMode: "reading" | "writing"
 }
 
-export function StudyMode({ flashcards, onComplete, onBack }: StudyModeProps) {
+export function StudyMode({ flashcards, onComplete, onBack, studyMode }: StudyModeProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isFlipped, setIsFlipped] = useState(false)
   const [correct, setCorrect] = useState<any[]>([])
@@ -243,9 +244,16 @@ export function StudyMode({ flashcards, onComplete, onBack }: StudyModeProps) {
                         }}
                       >
                         <div className="text-center">
-                          <div className="text-8xl mb-8" style={{ fontFamily: "serif" }}>
-                            {currentCard.hanzi}
-                          </div>
+                          {studyMode === "reading" ? (
+                            <div className="text-8xl mb-8" style={{ fontFamily: "serif" }}>
+                              {currentCard.hanzi}
+                            </div>
+                          ) : (
+                            <div className="text-center space-y-4 mb-8">
+                              <div className="text-3xl font-semibold text-foreground">{currentCard.meaning}</div>
+                              {currentCard.pinyin && <div className="text-xl text-primary">{currentCard.pinyin}</div>}
+                            </div>
+                          )}
                           <div className="text-sm text-muted-foreground flex items-center justify-center gap-2">
                             <RotateCw className="h-4 w-4" />
                             Pressione <kbd className="px-2 py-1 bg-muted rounded">Espaço</kbd> ou toque para virar
@@ -262,13 +270,26 @@ export function StudyMode({ flashcards, onComplete, onBack }: StudyModeProps) {
                         }}
                       >
                         <div className="text-center space-y-4">
-                          <div className="text-6xl mb-4" style={{ fontFamily: "serif" }}>
-                            {currentCard.hanzi}
-                          </div>
-                          {currentCard.pinyin && (
-                            <div className="text-2xl text-primary font-semibold">{currentCard.pinyin}</div>
+                          {studyMode === "writing" ? (
+                            <>
+                              <div className="text-7xl mb-4" style={{ fontFamily: "serif" }}>
+                                {currentCard.hanzi}
+                              </div>
+                              {currentCard.pinyin && (
+                                <div className="text-2xl text-primary font-semibold">{currentCard.pinyin}</div>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <div className="text-6xl mb-4" style={{ fontFamily: "serif" }}>
+                                {currentCard.hanzi}
+                              </div>
+                              {currentCard.pinyin && (
+                                <div className="text-2xl text-primary font-semibold">{currentCard.pinyin}</div>
+                              )}
+                              <div className="text-xl text-muted-foreground">{currentCard.meaning}</div>
+                            </>
                           )}
-                          <div className="text-xl text-muted-foreground">{currentCard.meaning}</div>
                         </div>
                       </div>
                     </div>

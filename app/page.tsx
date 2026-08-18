@@ -12,6 +12,7 @@ import { HanziCatalog } from "@/components/hanzi-catalog"
 
 export default function HomePage() {
   const [darkMode, setDarkMode] = useState(false)
+  const [studyMode, setStudyMode] = useState<"reading" | "writing">("reading")
   const [view, setView] = useState<"home" | "create" | "study" | "results" | "catalog">("home")
   const [flashcards, setFlashcards] = useState<any[]>([])
   const [studyingErrors, setStudyingErrors] = useState(false)
@@ -23,7 +24,11 @@ export default function HomePage() {
 
   useEffect(() => {
     const savedDarkMode = localStorage.getItem("darkMode") === "true"
+    const savedStudyMode = localStorage.getItem("studyMode")
     setDarkMode(savedDarkMode)
+    if (savedStudyMode === "writing" || savedStudyMode === "reading") {
+      setStudyMode(savedStudyMode)
+    }
     if (savedDarkMode) {
       document.documentElement.classList.add("dark")
     }
@@ -56,7 +61,7 @@ export default function HomePage() {
   }
 
   const handleExport = () => {
-    const dataStr = JSON.stringify({ flashcards, darkMode }, null, 2)
+    const dataStr = JSON.stringify({ flashcards, darkMode, studyMode }, null, 2)
     const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr)
     const exportFileDefaultName = "hanzi-flashcards.json"
     const linkElement = document.createElement("a")
@@ -86,6 +91,10 @@ export default function HomePage() {
         if (data.flashcards) {
           setFlashcards(data.flashcards)
           localStorage.setItem("hanziFlashcards", JSON.stringify(data.flashcards))
+        }
+        if (data.studyMode === "writing" || data.studyMode === "reading") {
+          setStudyMode(data.studyMode)
+          localStorage.setItem("studyMode", data.studyMode)
         }
         if (data.darkMode !== undefined) {
           setDarkMode(data.darkMode)
@@ -189,9 +198,10 @@ export default function HomePage() {
     const cardsToStudy = studyingErrors && studyResults?.incorrect?.length > 0 ? studyResults.incorrect : flashcards
 
     return (
-      <StudyMode
-        flashcards={cardsToStudy}
-        onComplete={handleStudyComplete}
+        <StudyMode
+          flashcards={cardsToStudy}
+          studyMode={studyMode}
+          onComplete={handleStudyComplete}
         onBack={() => {
           setView("home")
           setStudyingErrors(false)
@@ -241,9 +251,35 @@ export default function HomePage() {
             <BookOpen className="h-6 w-6" />
             <h1 className="text-2xl font-bold">Hanzi Flashcards</h1>
           </div>
-          <Button variant="ghost" size="icon" onClick={toggleDarkMode} aria-label="Alternar modo escuro">
-            {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </Button>
+          <div className="flex items-center gap-3">
+            <div className="inline-flex items-center rounded-lg border border-border bg-muted p-1" role="group" aria-label="Modo de estudo">
+              <button
+                type="button"
+                onClick={() => {
+                  setStudyMode("reading")
+                  localStorage.setItem("studyMode", "reading")
+                }}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${studyMode === "reading" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+                aria-pressed={studyMode === "reading"}
+              >
+                Leitura
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStudyMode("writing")
+                  localStorage.setItem("studyMode", "writing")
+                }}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${studyMode === "writing" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+                aria-pressed={studyMode === "writing"}
+              >
+                Escrita
+              </button>
+            </div>
+            <Button variant="ghost" size="icon" onClick={toggleDarkMode} aria-label="Alternar modo escuro">
+              {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </Button>
+          </div>
         </div>
       </header>
 
