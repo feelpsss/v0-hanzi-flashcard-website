@@ -226,7 +226,7 @@ export default function HomePage() {
     return (
       <HanziCatalog
         onAddCards={handleAddFromCatalog}
-        onBack={() => setView("home")}
+        onClose={() => setView("home")}
         existingFlashcards={flashcards}
         onRemoveCard={handleRemoveCardByHanzi}
       />
