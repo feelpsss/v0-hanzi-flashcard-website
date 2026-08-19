@@ -1,0 +1,354 @@
+{
+  "total": 102998,
+  "withPinyin": 44378,
+  "withMeanings": 24251,
+  "withRadical": 102998,
+  "withStrokeCount": 102998,
+  "withSimplifiedVariant": 6929,
+  "withTraditionalVariant": 6475,
+  "fileSizeBytes": 29260752,
+  "fileSizeMiB": 27.91,
+  "examples": {
+    "你": {
+      "character": "你",
+      "unicode": "U+4F60",
+      "pinyin": [
+        "nǐ"
+      ],
+      "pinyinNumeric": [
+        "ni3"
+      ],
+      "meanings": [
+        "you, second person pronoun",
+        "you (informal, as opposed to courteous 您[nin2])",
+        "you (Note: In Taiwan, 妳 is used to address females, but in mainland China, it is not commonly used. Instead, 你 is used to address both males and females.)"
+      ],
+      "sources": {
+        "pinyin": [
+          "Unihan",
+          "CC-CEDICT"
+        ],
+        "meanings": [
+          "Unihan",
+          "CC-CEDICT"
+        ]
+      },
+      "radicalStrokes": [
+        {
+          "radicalNumber": 9,
+          "radical": "⼈",
+          "additionalStrokes": 5,
+          "simplifiedForm": 0
+        }
+      ],
+      "radicalNumber": 9,
+      "radical": "⼈",
+      "strokeCounts": [
+        7
+      ],
+      "strokeCount": 7
+    },
+    "我": {
+      "character": "我",
+      "unicode": "U+6211",
+      "pinyin": [
+        "wǒ"
+      ],
+      "pinyinNumeric": [
+        "wo3"
+      ],
+      "meanings": [
+        "our, us, i, me, my, we",
+        "I; me; my"
+      ],
+      "sources": {
+        "pinyin": [
+          "Unihan",
+          "CC-CEDICT"
+        ],
+        "meanings": [
+          "Unihan",
+          "CC-CEDICT"
+        ]
+      },
+      "radicalStrokes": [
+        {
+          "radicalNumber": 62,
+          "radical": "⼽",
+          "additionalStrokes": 3,
+          "simplifiedForm": 0
+        }
+      ],
+      "radicalNumber": 62,
+      "radical": "⼽",
+      "strokeCounts": [
+        7
+      ],
+      "strokeCount": 7
+    },
+    "学": {
+      "character": "学",
+      "unicode": "U+5B66",
+      "pinyin": [
+        "xué"
+      ],
+      "pinyinNumeric": [
+        "xue2"
+      ],
+      "meanings": [
+        "learning, knowledge",
+        "school",
+        "to learn",
+        "to study",
+        "to imitate",
+        "science",
+        "-ology"
+      ],
+      "sources": {
+        "pinyin": [
+          "Unihan",
+          "CC-CEDICT"
+        ],
+        "meanings": [
+          "Unihan",
+          "CC-CEDICT"
+        ]
+      },
+      "radicalStrokes": [
+        {
+          "radicalNumber": 39,
+          "radical": "⼦",
+          "additionalStrokes": 5,
+          "simplifiedForm": 0
+        }
+      ],
+      "radicalNumber": 39,
+      "radical": "⼦",
+      "strokeCounts": [
+        8
+      ],
+      "strokeCount": 8,
+      "traditional": [
+        "學"
+      ]
+    },
+    "學": {
+      "character": "學",
+      "unicode": "U+5B78",
+      "pinyin": [
+        "xué"
+      ],
+      "pinyinNumeric": [
+        "xue2"
+      ],
+      "meanings": [
+        "learning, knowledge",
+        "school",
+        "to learn",
+        "to study",
+        "to imitate",
+        "science",
+        "-ology"
+      ],
+      "sources": {
+        "pinyin": [
+          "Unihan",
+          "CC-CEDICT"
+        ],
+        "meanings": [
+          "Unihan",
+          "CC-CEDICT"
+        ]
+      },
+      "radicalStrokes": [
+        {
+          "radicalNumber": 39,
+          "radical": "⼦",
+          "additionalStrokes": 13,
+          "simplifiedForm": 0
+        }
+      ],
+      "radicalNumber": 39,
+      "radical": "⼦",
+      "strokeCounts": [
+        16
+      ],
+      "strokeCount": 16,
+      "simplified": [
+        "学"
+      ]
+    },
+    "国": {
+      "character": "国",
+      "unicode": "U+56FD",
+      "pinyin": [
+        "guó"
+      ],
+      "pinyinNumeric": [
+        "guo2"
+      ],
+      "meanings": [
+        "nation, country, nation-state",
+        "surname Guo",
+        "country; nation; state",
+        "(bound form) national"
+      ],
+      "sources": {
+        "pinyin": [
+          "Unihan",
+          "CC-CEDICT"
+        ],
+        "meanings": [
+          "Unihan",
+          "CC-CEDICT"
+        ]
+      },
+      "radicalStrokes": [
+        {
+          "radicalNumber": 31,
+          "radical": "⼞",
+          "additionalStrokes": 5,
+          "simplifiedForm": 0
+        }
+      ],
+      "radicalNumber": 31,
+      "radical": "⼞",
+      "strokeCounts": [
+        8
+      ],
+      "strokeCount": 8,
+      "traditional": [
+        "國"
+      ]
+    },
+    "國": {
+      "character": "國",
+      "unicode": "U+570B",
+      "pinyin": [
+        "guó"
+      ],
+      "pinyinNumeric": [
+        "guo2"
+      ],
+      "meanings": [
+        "nation, country, nation-state",
+        "surname Guo",
+        "country; nation; state",
+        "(bound form) national"
+      ],
+      "sources": {
+        "pinyin": [
+          "Unihan",
+          "CC-CEDICT"
+        ],
+        "meanings": [
+          "Unihan",
+          "CC-CEDICT"
+        ]
+      },
+      "radicalStrokes": [
+        {
+          "radicalNumber": 31,
+          "radical": "⼞",
+          "additionalStrokes": 8,
+          "simplifiedForm": 0
+        }
+      ],
+      "radicalNumber": 31,
+      "radical": "⼞",
+      "strokeCounts": [
+        11
+      ],
+      "strokeCount": 11,
+      "simplified": [
+        "国"
+      ]
+    },
+    "龍": {
+      "character": "龍",
+      "unicode": "U+9F8D",
+      "pinyin": [
+        "lóng"
+      ],
+      "pinyinNumeric": [
+        "long2"
+      ],
+      "meanings": [
+        "dragon",
+        "Kangxi radical 212",
+        "surname Long",
+        "Chinese dragon; loong",
+        "(fig.) emperor",
+        "(bound form) dinosaur"
+      ],
+      "sources": {
+        "pinyin": [
+          "Unihan",
+          "CC-CEDICT"
+        ],
+        "meanings": [
+          "Unihan",
+          "CC-CEDICT"
+        ]
+      },
+      "radicalStrokes": [
+        {
+          "radicalNumber": 212,
+          "radical": "⿓",
+          "additionalStrokes": 0,
+          "simplifiedForm": 0
+        }
+      ],
+      "radicalNumber": 212,
+      "radical": "⿓",
+      "strokeCounts": [
+        16
+      ],
+      "strokeCount": 16,
+      "simplified": [
+        "龙"
+      ]
+    },
+    "龘": {
+      "character": "龘",
+      "unicode": "U+9F98",
+      "pinyin": [
+        "dá"
+      ],
+      "pinyinNumeric": [
+        "da2"
+      ],
+      "meanings": [
+        "the appearance of a dragon walking",
+        "variant of 龖[da2]"
+      ],
+      "sources": {
+        "pinyin": [
+          "Unihan",
+          "CC-CEDICT"
+        ],
+        "meanings": [
+          "Unihan",
+          "CC-CEDICT"
+        ]
+      },
+      "radicalStrokes": [
+        {
+          "radicalNumber": 212,
+          "radical": "⿓",
+          "additionalStrokes": 32,
+          "simplifiedForm": 0
+        }
+      ],
+      "radicalNumber": 212,
+      "radical": "⿓",
+      "strokeCounts": [
+        48
+      ],
+      "strokeCount": 48,
+      "simplified": [
+        "𮹝"
+      ]
+    }
+  }
+}
