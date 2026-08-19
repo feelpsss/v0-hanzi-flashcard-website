@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, Search, Plus, Check, X, FolderPlus, Trash2, Star } from "lucide-react"
 import { HANZI_CATALOG } from "@/lib/hanzi-data"
+import type { HanziCharacterSearchResult } from "@/lib/hanzi-character"
 
 interface HanziCatalogProps {
   flashcards?: any[]
@@ -42,6 +43,10 @@ export function HanziCatalog({
   const [categorySelection, setCategorySelection] = useState<any[]>([])
   const [categoryModalSearch, setCategoryModalSearch] = useState("")
   const [categoryToDelete, setCategoryToDelete] = useState<{ id: string; name: string } | null>(null)
+  const [broadResults, setBroadResults] = useState<HanziCharacterSearchResult[]>([])
+  const [broadSearchLoading, setBroadSearchLoading] = useState(false)
+  const [broadSearchError, setBroadSearchError] = useState(false)
+  const [selectedBroadHanzi, setSelectedBroadHanzi] = useState<HanziCharacterSearchResult | null>(null)
 
   useEffect(() => {
     const saved = localStorage.getItem("customHanziCategories")
@@ -53,6 +58,41 @@ export function HanziCatalog({
       }
     }
   }, [])
+
+  useEffect(() => {
+    if (activeTab !== "all" || !searchTerm.trim()) {
+      setBroadResults([])
+      setBroadSearchLoading(false)
+      setBroadSearchError(false)
+      return
+    }
+
+    const controller = new AbortController()
+    const timeout = setTimeout(async () => {
+      setBroadSearchLoading(true)
+      setBroadSearchError(false)
+      try {
+        const response = await fetch(`/api/hanzi/search?q=${encodeURIComponent(searchTerm.trim())}`, {
+          signal: controller.signal,
+        })
+        if (!response.ok) throw new Error("Search request failed")
+        const payload = (await response.json()) as { results: HanziCharacterSearchResult[] }
+        setBroadResults(payload.results)
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setBroadResults([])
+          setBroadSearchError(true)
+        }
+      } finally {
+        if (!controller.signal.aborted) setBroadSearchLoading(false)
+      }
+    }, 300)
+
+    return () => {
+      clearTimeout(timeout)
+      controller.abort()
+    }
+  }, [activeTab, searchTerm])
 
   const persistCustomCategories = (categories: { id: string; name: string; cards: any[] }[]) => {
     setCustomCategories(categories)
@@ -225,6 +265,40 @@ export function HanziCatalog({
     </div>
   )
 
+  const renderBroadSearchResults = () => {
+    if (!searchTerm.trim()) {
+      return <p className="text-muted-foreground">Digite um hanzi, pinyin, significado ou código Unicode para buscar.</p>
+    }
+    if (broadSearchLoading) return <p className="text-muted-foreground">Buscando...</p>
+    if (broadSearchError) return <p className="text-muted-foreground">Não foi possível concluir a busca.</p>
+    if (broadResults.length === 0) return <p className="text-muted-foreground">Nenhum hanzi encontrado.</p>
+
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+        {broadResults.map((entry) => (
+          <button
+            key={entry.character}
+            onClick={() => setSelectedBroadHanzi(entry)}
+            className="group relative p-4 border-2 rounded-lg transition-all hover:shadow-lg border-border bg-card hover:border-primary/50"
+          >
+            <div className="text-4xl mb-2 text-center">{entry.character}</div>
+            <div className="text-sm text-muted-foreground text-center">{entry.pinyin[0] ?? "—"}</div>
+            <div className="text-xs text-muted-foreground text-center mt-1 text-balance">
+              {entry.meanings[0] ?? "—"}
+            </div>
+            {(entry.strokeCount !== undefined || entry.radical) && (
+              <div className="text-xs text-muted-foreground text-center mt-2">
+                {entry.strokeCount !== undefined && `${entry.strokeCount} traços`}
+                {entry.strokeCount !== undefined && entry.radical && " · "}
+                {entry.radical && `Radical ${entry.radical}`}
+              </div>
+            )}
+          </button>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Snackbar - merged from both existing and updates */}
@@ -282,6 +356,9 @@ export function HanziCatalog({
                 {/* Mobile carousel - Added from updates */}
                 <div className="lg:hidden overflow-x-auto pb-2 -mx-4 px-4">
                   <TabsList className="inline-flex h-auto w-auto gap-2 bg-transparent">
+                    <TabsTrigger value="all" className="whitespace-nowrap">
+                      Todos os Hanzis
+                    </TabsTrigger>
                     <TabsTrigger value="aulas" className="whitespace-nowrap">
                       Básico 1
                     </TabsTrigger>
@@ -403,6 +480,9 @@ export function HanziCatalog({
 
                 {/* Desktop sidebar - modified from existing */}
                 <TabsList className="hidden lg:flex flex-col h-auto w-full gap-1">
+                  <TabsTrigger value="all" className="w-full justify-start">
+                    Todos os Hanzis
+                  </TabsTrigger>
                   <TabsTrigger value="aulas" className="w-full justify-start">
                     Básico 1
                   </TabsTrigger>
@@ -473,6 +553,11 @@ export function HanziCatalog({
 
             {/* Hanzis Grid - Right side */}
             <div className="flex-1 order-2 lg:order-2">
+              <TabsContent value="all" className="space-y-4 mt-0">
+                <h2 className="text-2xl font-bold">Todos os Hanzis</h2>
+                {renderBroadSearchResults()}
+              </TabsContent>
+
               {Object.entries(HANZI_CATALOG).map(([category, cards]) => (
                 <TabsContent key={category} value={category} className="space-y-4 mt-0">
                   <div className="flex items-center justify-between">
@@ -557,6 +642,49 @@ export function HanziCatalog({
       </div>
 
       {/* Create custom category modal */}
+      {selectedBroadHanzi && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card border-2 border-border rounded-xl w-full max-w-lg shadow-2xl p-6">
+            <div className="flex items-start justify-between gap-4 mb-6">
+              <div>
+                <div className="text-6xl mb-2">{selectedBroadHanzi.character}</div>
+                <div className="text-sm text-muted-foreground">{selectedBroadHanzi.unicode}</div>
+              </div>
+              <button
+                onClick={() => setSelectedBroadHanzi(null)}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Fechar detalhes"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-4 text-sm">
+              {selectedBroadHanzi.pinyin.length > 0 && (
+                <div><span className="font-semibold">Pinyin:</span> {selectedBroadHanzi.pinyin.join(", ")}</div>
+              )}
+              {selectedBroadHanzi.meanings.length > 0 && (
+                <div><span className="font-semibold">Significados:</span> {selectedBroadHanzi.meanings.join("; ")}</div>
+              )}
+              {selectedBroadHanzi.radical && (
+                <div>
+                  <span className="font-semibold">Radical:</span> {selectedBroadHanzi.radical}
+                  {selectedBroadHanzi.radicalNumber !== undefined && ` (nº ${selectedBroadHanzi.radicalNumber})`}
+                </div>
+              )}
+              {selectedBroadHanzi.strokeCounts && selectedBroadHanzi.strokeCounts.length > 0 && (
+                <div><span className="font-semibold">Traços:</span> {selectedBroadHanzi.strokeCounts.join(", ")}</div>
+              )}
+              {selectedBroadHanzi.simplified && selectedBroadHanzi.simplified.length > 0 && (
+                <div><span className="font-semibold">Simplificado:</span> {selectedBroadHanzi.simplified.join(", ")}</div>
+              )}
+              {selectedBroadHanzi.traditional && selectedBroadHanzi.traditional.length > 0 && (
+                <div><span className="font-semibold">Tradicional:</span> {selectedBroadHanzi.traditional.join(", ")}</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {showCategoryModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-card border-2 border-border rounded-xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
