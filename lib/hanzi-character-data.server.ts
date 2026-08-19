@@ -51,6 +51,7 @@ export async function searchHanziCharacters({
       normalizeSearchValue(entry.character) !== normalizedQuery &&
       normalizeSearchValue(entry.unicode) !== normalizedQuery &&
       (!entry.radical || normalizeSearchValue(entry.radical) !== normalizedQuery) &&
+      (!entry.radicalSymbol || normalizeSearchValue(entry.radicalSymbol) !== normalizedQuery) &&
       !entry.pinyin.some((value) => normalizeSearchValue(value).includes(normalizedQuery)) &&
       !entry.pinyinNumeric?.some((value) => normalizeSearchValue(value).includes(normalizedQuery)) &&
       !entry.meanings.some((value) => normalizeSearchValue(value).includes(normalizedQuery))

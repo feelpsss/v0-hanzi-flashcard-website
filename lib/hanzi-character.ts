@@ -3,9 +3,25 @@ export type HanziCharacterSource = "Unihan" | "CC-CEDICT"
 export interface HanziRadicalStroke {
   radicalNumber: number
   radical: string
+  radicalSymbol?: string
   additionalStrokes: number
   /** 0 = Kangxi form; 1-3 identify alternate simplified radical forms from kRSUnicode. */
   simplifiedForm: number
+}
+
+export interface HanziRadicalForm {
+  radicalNumber: number
+  radical: string
+  radicalSymbol?: string
+  simplifiedForm: number
+}
+
+export interface HanziRadical {
+  radicalNumber: number
+  radical: string
+  radicalSymbol?: string
+  components: string[]
+  forms: HanziRadicalForm[]
 }
 
 export interface HanziCharacter {
@@ -15,6 +31,7 @@ export interface HanziCharacter {
   pinyinNumeric?: string[]
   meanings: string[]
   radical?: string
+  radicalSymbol?: string
   radicalNumber?: number
   radicalStrokes?: HanziRadicalStroke[]
   strokeCount?: number
@@ -43,6 +60,7 @@ export interface HanziCharacterDataset {
     }>
   }
   statistics: HanziCharacterStatistics
+  radicals: HanziRadical[]
   characters: HanziCharacter[]
 }
 

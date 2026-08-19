@@ -12,9 +12,13 @@ Esta camada é estrutural/lexical e não substitui `lib/hanzi-data.ts`. O conte�
 - Licença: Unicode License v3 (`https://www.unicode.org/license.txt`)
 - Campos: `kMandarin`, `kDefinition`, `kRSUnicode`, `kTotalStrokes`, `kSimplifiedVariant` e `kTraditionalVariant`
 
+O mapeamento visual dos radicais usa também `https://www.unicode.org/Public/17.0.0/ucd/CJKRadicals.txt` (Unicode 17.0.0, 2025-05-07, SHA-256 `826f83be25cd18fb8a5015a514704504e1982e840ea14d058bf583e1cc620c83`, Unicode License v3).
+
 O gerador examina todos os arquivos `Unihan*.txt` do ZIP, sem supor em qual arquivo cada propriedade estará. Isso acompanha a recomendação do UAX #38, pois propriedades podem mudar de arquivo entre versões.
 
-`kRSUnicode` é preservado em `radicalStrokes`. Cada valor guarda o número do radical Kangxi, o símbolo correspondente no bloco Kangxi Radicals (`U+2F00` a `U+2FD5`), os traços residuais e o indicador de forma simplificada. `radical` e `radicalNumber` expõem o primeiro valor como atalho, sem descartar valores alternativos.
+`kRSUnicode` é preservado em `radicalStrokes`. Cada valor guarda o número do radical Kangxi, o ideograma unificado para exibição, o símbolo Unicode técnico, os traços residuais e o indicador de forma simplificada. `radical`, `radicalSymbol` e `radicalNumber` expõem o primeiro valor como atalho, sem descartar valores alternativos.
+
+O dataset também contém um catálogo de 214 radicais. Nele, `radical` é a forma de exibição (`人`, `戈`, `龍`), `radicalSymbol` preserva o símbolo técnico (`⼈`, `⼽`, `⿓`) e `components` reúne componentes com zero traços residuais derivados do próprio Unihan. Assim, o radical 9 disponibiliza `人`, `亻` e outras formas documentadas sem uma tabela pedagógica manual.
 
 ### CC-CEDICT
 

@@ -38,6 +38,17 @@ const CC_CEDICT = {
   snapshot: "scripts/hanzi-data/sources/cedict-2026-08-18.txt.gz",
 }
 
+const CJK_RADICALS = {
+  name: "Unicode CJK Radicals",
+  version: "17.0.0",
+  date: "2025-05-07",
+  url: "https://www.unicode.org/Public/17.0.0/ucd/CJKRadicals.txt",
+  license: "Unicode License v3",
+  licenseUrl: "https://www.unicode.org/license.txt",
+  sha256: "826f83be25cd18fb8a5015a514704504e1982e840ea14d058bf583e1cc620c83",
+  fields: ["radicalNumber", "radicalSymbol", "unifiedIdeograph"],
+}
+
 const toneMarks = {
   a: ["a", "ā", "á", "ǎ", "à"],
   e: ["e", "ē", "é", "ě", "è"],
@@ -122,16 +133,38 @@ function parseVariants(value) {
   return unique([...value.matchAll(/U\+([0-9A-F]{4,6})/g)].map((match) => String.fromCodePoint(Number.parseInt(match[1], 16))))
 }
 
-function parseRadicalStrokes(value) {
+function parseCjkRadicals(text) {
+  const radicals = new Map()
+  for (const rawLine of text.split("\n")) {
+    const line = rawLine.replace(/#.*/, "").trim()
+    if (!line) continue
+    const [identifier, symbolCodePoint, ideographCodePoint] = line.split(";").map((field) => field.trim())
+    const match = /^(\d{1,3})('{0,3})$/.exec(identifier)
+    if (!match) throw new Error(`Unsupported CJK radical identifier: ${identifier}`)
+    radicals.set(identifier, {
+      radicalNumber: Number.parseInt(match[1], 10),
+      simplifiedForm: match[2].length,
+      radicalSymbol: symbolCodePoint ? String.fromCodePoint(Number.parseInt(symbolCodePoint, 16)) : undefined,
+      radical: String.fromCodePoint(Number.parseInt(ideographCodePoint, 16)),
+    })
+  }
+  return radicals
+}
+
+function parseRadicalStrokes(value, radicalMappings) {
   return value.split(" ").map((item) => {
     const match = /^(\d{1,3})('{0,3})\.(-?\d+)$/.exec(item)
     if (!match) throw new Error(`Unsupported kRSUnicode value: ${item}`)
     const radicalNumber = Number.parseInt(match[1], 10)
+    const simplifiedForm = match[2].length
+    const mapping = radicalMappings.get(`${radicalNumber}${"'".repeat(simplifiedForm)}`)
+    if (!mapping) throw new Error(`Missing CJKRadicals mapping for ${item}`)
     return {
       radicalNumber,
-      radical: String.fromCodePoint(0x2f00 + radicalNumber - 1),
+      radical: mapping.radical,
+      ...(mapping.radicalSymbol ? { radicalSymbol: mapping.radicalSymbol } : {}),
       additionalStrokes: Number.parseInt(match[3], 10),
-      simplifiedForm: match[2].length,
+      simplifiedForm,
     }
   })
 }
@@ -193,7 +226,7 @@ function addValues(target, field, values, source) {
   if (values.length > 0) addSource(target, field === "meanings" ? "meanings" : "pinyin", source)
 }
 
-function parseUnihan(files) {
+function parseUnihan(files, radicalMappings) {
   const characters = new Map()
   const wantedFields = new Set(UNIHAN.fields)
 
@@ -210,9 +243,10 @@ function parseUnihan(files) {
       if (field === "kMandarin") addValues(entry, "pinyin", value.split(" ").map((item) => item.toLowerCase()), "Unihan")
       if (field === "kDefinition") addValues(entry, "meanings", splitUnihanMeanings(value), "Unihan")
       if (field === "kRSUnicode") {
-        entry.radicalStrokes = parseRadicalStrokes(value)
+        entry.radicalStrokes = parseRadicalStrokes(value, radicalMappings)
         entry.radicalNumber = entry.radicalStrokes[0].radicalNumber
         entry.radical = entry.radicalStrokes[0].radical
+        if (entry.radicalStrokes[0].radicalSymbol) entry.radicalSymbol = entry.radicalStrokes[0].radicalSymbol
       }
       if (field === "kTotalStrokes") {
         entry.strokeCounts = unique(value.split(" ").map((item) => Number.parseInt(item, 10)))
@@ -223,6 +257,33 @@ function parseUnihan(files) {
     }
   }
   return characters
+}
+
+function createRadicalCatalog(radicalMappings, characters) {
+  const components = new Map()
+  for (const entry of characters.values()) {
+    for (const radicalStroke of entry.radicalStrokes ?? []) {
+      if (radicalStroke.additionalStrokes !== 0) continue
+      const values = components.get(radicalStroke.radicalNumber) ?? []
+      if (!values.includes(entry.character)) values.push(entry.character)
+      components.set(radicalStroke.radicalNumber, values)
+    }
+  }
+
+  return Array.from({ length: 214 }, (_, index) => {
+    const radicalNumber = index + 1
+    const forms = [...radicalMappings.values()]
+      .filter((mapping) => mapping.radicalNumber === radicalNumber)
+      .sort((left, right) => left.simplifiedForm - right.simplifiedForm)
+    const primary = forms[0]
+    return {
+      radicalNumber,
+      radical: primary.radical,
+      ...(primary.radicalSymbol ? { radicalSymbol: primary.radicalSymbol } : {}),
+      components: unique([primary.radical, ...(components.get(radicalNumber) ?? [])]),
+      forms,
+    }
+  })
 }
 
 function parseCcCedict(buffer, characters) {
@@ -271,31 +332,43 @@ function createStatistics(characters) {
 }
 
 async function main() {
-  const unihanArchive = await download(UNIHAN.url)
+  const [unihanArchive, cjkRadicalsFile] = await Promise.all([download(UNIHAN.url), download(CJK_RADICALS.url)])
   assertChecksum(unihanArchive, UNIHAN.sha256, UNIHAN.name)
+  assertChecksum(cjkRadicalsFile, CJK_RADICALS.sha256, CJK_RADICALS.name)
   const ccCedictArchive = await readFile(path.join(projectRoot, CC_CEDICT.snapshot))
   assertChecksum(ccCedictArchive, CC_CEDICT.sha256, CC_CEDICT.name)
 
-  const characterMap = parseUnihan(unzipTextFiles(unihanArchive))
+  const radicalMappings = parseCjkRadicals(cjkRadicalsFile.toString("utf8"))
+  const characterMap = parseUnihan(unzipTextFiles(unihanArchive), radicalMappings)
   parseCcCedict(ccCedictArchive, characterMap)
   const characters = [...characterMap.entries()]
     .sort(([left], [right]) => left - right)
     .map(([, entry]) => cleanEntry(entry))
   const statistics = createStatistics(characters)
-  const metadata = { schemaVersion: 1, sources: { unihan: UNIHAN, ccCedict: CC_CEDICT } }
-  const dataset = { metadata, statistics, characters }
+  const radicals = createRadicalCatalog(radicalMappings, characterMap)
+  const metadata = { schemaVersion: 1, sources: { unihan: UNIHAN, cjkRadicals: CJK_RADICALS, ccCedict: CC_CEDICT } }
+  const dataset = { metadata, statistics, radicals, characters }
   const examples = Object.fromEntries(
     ["你", "我", "学", "學", "国", "國", "龍", "龘"].map((character) => [
       character,
       characters.find((entry) => entry.character === character) ?? null,
     ]),
   )
+  const radicalExamples = Object.fromEntries(
+    [9, 62, 212].map((radicalNumber) => [radicalNumber, radicals[radicalNumber - 1]]),
+  )
 
   await mkdir(generatedDirectory, { recursive: true })
   const datasetPath = path.join(generatedDirectory, "hanzi-characters.json")
   await writeFile(datasetPath, `${JSON.stringify(dataset)}\n`)
   const fileSizeBytes = (await readFile(datasetPath)).byteLength
-  const report = { ...statistics, fileSizeBytes, fileSizeMiB: Number((fileSizeBytes / 1024 / 1024).toFixed(2)), examples }
+  const report = {
+    ...statistics,
+    fileSizeBytes,
+    fileSizeMiB: Number((fileSizeBytes / 1024 / 1024).toFixed(2)),
+    radicalExamples,
+    examples,
+  }
   await writeFile(path.join(generatedDirectory, "hanzi-characters.report.json"), `${JSON.stringify(report, null, 2)}\n`)
   console.log(JSON.stringify(report, null, 2))
 }

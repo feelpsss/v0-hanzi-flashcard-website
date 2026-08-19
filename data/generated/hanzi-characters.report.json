@@ -6,8 +6,81 @@
   "withStrokeCount": 102998,
   "withSimplifiedVariant": 6929,
   "withTraditionalVariant": 6475,
-  "fileSizeBytes": 29260752,
-  "fileSizeMiB": 27.91,
+  "fileSizeBytes": 33842104,
+  "fileSizeMiB": 32.27,
+  "radicalExamples": {
+    "9": {
+      "radicalNumber": 9,
+      "radical": "人",
+      "radicalSymbol": "⼈",
+      "components": [
+        "人",
+        "亻",
+        "𠆢"
+      ],
+      "forms": [
+        {
+          "radicalNumber": 9,
+          "simplifiedForm": 0,
+          "radicalSymbol": "⼈",
+          "radical": "人"
+        }
+      ]
+    },
+    "62": {
+      "radicalNumber": 62,
+      "radical": "戈",
+      "radicalSymbol": "⼽",
+      "components": [
+        "戈"
+      ],
+      "forms": [
+        {
+          "radicalNumber": 62,
+          "simplifiedForm": 0,
+          "radicalSymbol": "⼽",
+          "radical": "戈"
+        }
+      ]
+    },
+    "212": {
+      "radicalNumber": 212,
+      "radical": "龍",
+      "radicalSymbol": "⿓",
+      "components": [
+        "龍",
+        "竜",
+        "龙",
+        "龍",
+        "𱷥"
+      ],
+      "forms": [
+        {
+          "radicalNumber": 212,
+          "simplifiedForm": 0,
+          "radicalSymbol": "⿓",
+          "radical": "龍"
+        },
+        {
+          "radicalNumber": 212,
+          "simplifiedForm": 1,
+          "radicalSymbol": "⻰",
+          "radical": "龙"
+        },
+        {
+          "radicalNumber": 212,
+          "simplifiedForm": 2,
+          "radicalSymbol": "⻯",
+          "radical": "竜"
+        },
+        {
+          "radicalNumber": 212,
+          "simplifiedForm": 3,
+          "radical": "𱷥"
+        }
+      ]
+    }
+  },
   "examples": {
     "你": {
       "character": "你",
@@ -36,13 +109,15 @@
       "radicalStrokes": [
         {
           "radicalNumber": 9,
-          "radical": "⼈",
+          "radical": "人",
+          "radicalSymbol": "⼈",
           "additionalStrokes": 5,
           "simplifiedForm": 0
         }
       ],
       "radicalNumber": 9,
-      "radical": "⼈",
+      "radical": "人",
+      "radicalSymbol": "⼈",
       "strokeCounts": [
         7
       ],
@@ -74,13 +149,15 @@
       "radicalStrokes": [
         {
           "radicalNumber": 62,
-          "radical": "⼽",
+          "radical": "戈",
+          "radicalSymbol": "⼽",
           "additionalStrokes": 3,
           "simplifiedForm": 0
         }
       ],
       "radicalNumber": 62,
-      "radical": "⼽",
+      "radical": "戈",
+      "radicalSymbol": "⼽",
       "strokeCounts": [
         7
       ],
@@ -117,13 +194,15 @@
       "radicalStrokes": [
         {
           "radicalNumber": 39,
-          "radical": "⼦",
+          "radical": "子",
+          "radicalSymbol": "⼦",
           "additionalStrokes": 5,
           "simplifiedForm": 0
         }
       ],
       "radicalNumber": 39,
-      "radical": "⼦",
+      "radical": "子",
+      "radicalSymbol": "⼦",
       "strokeCounts": [
         8
       ],
@@ -163,13 +242,15 @@
       "radicalStrokes": [
         {
           "radicalNumber": 39,
-          "radical": "⼦",
+          "radical": "子",
+          "radicalSymbol": "⼦",
           "additionalStrokes": 13,
           "simplifiedForm": 0
         }
       ],
       "radicalNumber": 39,
-      "radical": "⼦",
+      "radical": "子",
+      "radicalSymbol": "⼦",
       "strokeCounts": [
         16
       ],
@@ -206,13 +287,15 @@
       "radicalStrokes": [
         {
           "radicalNumber": 31,
-          "radical": "⼞",
+          "radical": "囗",
+          "radicalSymbol": "⼞",
           "additionalStrokes": 5,
           "simplifiedForm": 0
         }
       ],
       "radicalNumber": 31,
-      "radical": "⼞",
+      "radical": "囗",
+      "radicalSymbol": "⼞",
       "strokeCounts": [
         8
       ],
@@ -249,13 +332,15 @@
       "radicalStrokes": [
         {
           "radicalNumber": 31,
-          "radical": "⼞",
+          "radical": "囗",
+          "radicalSymbol": "⼞",
           "additionalStrokes": 8,
           "simplifiedForm": 0
         }
       ],
       "radicalNumber": 31,
-      "radical": "⼞",
+      "radical": "囗",
+      "radicalSymbol": "⼞",
       "strokeCounts": [
         11
       ],
@@ -294,13 +379,15 @@
       "radicalStrokes": [
         {
           "radicalNumber": 212,
-          "radical": "⿓",
+          "radical": "龍",
+          "radicalSymbol": "⿓",
           "additionalStrokes": 0,
           "simplifiedForm": 0
         }
       ],
       "radicalNumber": 212,
-      "radical": "⿓",
+      "radical": "龍",
+      "radicalSymbol": "⿓",
       "strokeCounts": [
         16
       ],
@@ -335,13 +422,15 @@
       "radicalStrokes": [
         {
           "radicalNumber": 212,
-          "radical": "⿓",
+          "radical": "龍",
+          "radicalSymbol": "⿓",
           "additionalStrokes": 32,
           "simplifiedForm": 0
         }
       ],
       "radicalNumber": 212,
-      "radical": "⿓",
+      "radical": "龍",
+      "radicalSymbol": "⿓",
       "strokeCounts": [
         48
       ],
