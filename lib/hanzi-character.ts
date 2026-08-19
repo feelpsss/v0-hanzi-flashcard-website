@@ -80,3 +80,17 @@ export interface HanziCharacterSearchOptions {
   strokeCount?: number
   limit?: number
 }
+
+export type HanziCharacterSearchResult = Pick<
+  HanziCharacter,
+  | "character"
+  | "unicode"
+  | "pinyin"
+  | "meanings"
+  | "radical"
+  | "radicalNumber"
+  | "strokeCount"
+  | "strokeCounts"
+  | "simplified"
+  | "traditional"
+>
