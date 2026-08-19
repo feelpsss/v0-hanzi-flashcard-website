@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { HanziStrokeOrder } from "@/components/hanzi-stroke-order"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, Search, Plus, Check, X, FolderPlus, Trash2, Star } from "lucide-react"
 import { HANZI_CATALOG } from "@/lib/hanzi-data"
@@ -644,7 +645,7 @@ export function HanziCatalog({
       {/* Create custom category modal */}
       {selectedBroadHanzi && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card border-2 border-border rounded-xl w-full max-w-lg shadow-2xl p-6">
+          <div className="bg-card border-2 border-border rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl p-6">
             <div className="flex items-start justify-between gap-4 mb-6">
               <div>
                 <div className="text-6xl mb-2">{selectedBroadHanzi.character}</div>
@@ -680,6 +681,7 @@ export function HanziCatalog({
               {selectedBroadHanzi.traditional && selectedBroadHanzi.traditional.length > 0 && (
                 <div><span className="font-semibold">Tradicional:</span> {selectedBroadHanzi.traditional.join(", ")}</div>
               )}
+              <HanziStrokeOrder character={selectedBroadHanzi.character} />
             </div>
           </div>
         </div>
