@@ -15,8 +15,6 @@ let characterIndexPromise: Promise<Map<string, HanziCharacter>> | undefined
 
 type RankedEntry = {
   entry: HanziCharacter
-  character: string
-  unicode: string
   pinyin: string[]
   meanings: string[]
 }
@@ -48,9 +46,7 @@ async function loadSearchIndex(): Promise<RankedEntry[]> {
   searchIndexPromise ??= loadHanziCharacterDataset().then(({ characters }) =>
     characters.map((entry) => ({
       entry,
-      character: normalizeSearchValue(entry.character),
-      unicode: normalizeUnicode(entry.unicode),
-      pinyin: [...entry.pinyin, ...(entry.pinyinNumeric ?? [])].map(normalizeSearchValue),
+      pinyin: [...new Set([...entry.pinyin, ...(entry.pinyinNumeric ?? [])].map(normalizeSearchValue))],
       meanings: entry.meanings.map(normalizeSearchValue),
     })),
   )
@@ -71,7 +67,8 @@ export async function searchHanziCharacters({
   if (!normalizedQuery) return []
 
   const normalizedUnicode = normalizeUnicode(query)
-  const rankedResults: { entry: HanziCharacter; rank: number }[] = []
+  const resultLimit = Math.max(1, Math.min(limit, 100))
+  const buckets: HanziCharacter[][] = [[], [], [], [], [], [], []]
 
   for (const searchable of await loadSearchIndex()) {
     const { entry } = searchable
@@ -81,8 +78,8 @@ export async function searchHanziCharacters({
     // Stable, intentionally small ranking model: exact identity first, then
     // pinyin, meanings, and finally partial matches.
     let rank: number | undefined
-    if (searchable.character === normalizedQuery) rank = 0
-    else if (searchable.unicode === normalizedUnicode) rank = 1
+    if (entry.character === normalizedQuery) rank = 0
+    else if (entry.unicode === normalizedUnicode) rank = 1
     else if (searchable.pinyin.includes(normalizedQuery)) rank = 2
     else if (searchable.pinyin.some((value) => value.startsWith(normalizedQuery))) rank = 3
     else if (searchable.meanings.includes(normalizedQuery)) rank = 4
@@ -92,11 +89,18 @@ export async function searchHanziCharacters({
       searchable.meanings.some((value) => value.includes(normalizedQuery))
     ) rank = 6
 
-    if (rank !== undefined) rankedResults.push({ entry, rank })
+    // Later entries in the same rank cannot enter the final limited result,
+    // so each bucket is capped without changing its stable source order.
+    if (rank !== undefined && buckets[rank].length < resultLimit) buckets[rank].push(entry)
   }
 
-  return rankedResults
-    .sort((a, b) => a.rank - b.rank || a.entry.character.localeCompare(b.entry.character))
-    .slice(0, Math.max(1, Math.min(limit, 100)))
-    .map(({ entry }) => entry)
+  const results: HanziCharacter[] = []
+  // The generated dataset has a stable character order, which becomes the
+  // deterministic tie-breaker inside each rank without any extra sorting.
+  for (const bucket of buckets) {
+    const remaining = resultLimit - results.length
+    if (remaining <= 0) break
+    results.push(...bucket.slice(0, remaining))
+  }
+  return results
 }
