@@ -5,6 +5,7 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
+    "hanzi:data": "node scripts/hanzi-data/generate.mjs",
     "lint": "eslint .",
     "start": "next start"
   },
