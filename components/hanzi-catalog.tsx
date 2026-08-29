@@ -28,7 +28,8 @@ export function HanziCatalog({
   onRemoveFlashcard,
 }: HanziCatalogProps) {
   const [selectedCards, setSelectedCards] = useState<any[]>([])
-  const [searchTerm, setSearchTerm] = useState("")
+  const [globalSearchTerm, setGlobalSearchTerm] = useState("")
+  const [categorySearchTerm, setCategorySearchTerm] = useState("")
   const [activeTab, setActiveTab] = useState("aulas")
   const [snackbar, setSnackbar] = useState<{ message: string; visible: boolean }>({
     message: "",
@@ -61,7 +62,7 @@ export function HanziCatalog({
   }, [])
 
   useEffect(() => {
-    if (activeTab !== "all" || !searchTerm.trim()) {
+    if (!globalSearchTerm.trim()) {
       setBroadResults([])
       setBroadSearchLoading(false)
       setBroadSearchError(false)
@@ -73,7 +74,7 @@ export function HanziCatalog({
       setBroadSearchLoading(true)
       setBroadSearchError(false)
       try {
-        const response = await fetch(`/api/hanzi/search?q=${encodeURIComponent(searchTerm.trim())}`, {
+        const response = await fetch(`/api/hanzi/search?q=${encodeURIComponent(globalSearchTerm.trim())}`, {
           signal: controller.signal,
         })
         if (!response.ok) throw new Error("Search request failed")
@@ -93,7 +94,12 @@ export function HanziCatalog({
       clearTimeout(timeout)
       controller.abort()
     }
-  }, [activeTab, searchTerm])
+  }, [globalSearchTerm])
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value)
+    setCategorySearchTerm("")
+  }
 
   const persistCustomCategories = (categories: { id: string; name: string; cards: any[] }[]) => {
     setCustomCategories(categories)
@@ -213,19 +219,40 @@ export function HanziCatalog({
     }
   }
 
-  const filterCards = (cards: any[]) => {
-    if (!searchTerm) return cards
-    return cards.filter(
-      (card) =>
-        card.hanzi.includes(searchTerm) ||
-        card.pinyin.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        card.meaning.toLowerCase().includes(searchTerm.toLowerCase()),
+  const filterCategoryCards = (cards: any[]) => {
+    const normalizedTerm = categorySearchTerm.trim().toLowerCase().replace(/\s+/g, " ")
+    if (!normalizedTerm) return cards
+    return cards.filter((card) =>
+      [card.hanzi, card.pinyin, card.meaning]
+        .filter((value): value is string => typeof value === "string")
+        .join(" ")
+        .toLowerCase()
+        .replace(/\s+/g, " ")
+        .includes(normalizedTerm),
     )
   }
 
-  const renderCardGrid = (cards: any[]) => (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
-      {filterCards(cards).map((card) => {
+  const renderCategorySearch = () => (
+    <div className="relative">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <Input
+        placeholder="Buscar nesta categoria"
+        value={categorySearchTerm}
+        onChange={(event) => setCategorySearchTerm(event.target.value)}
+        className="pl-10"
+      />
+    </div>
+  )
+
+  const renderCardGrid = (cards: any[]) => {
+    const filteredCards = filterCategoryCards(cards)
+    if (filteredCards.length === 0) {
+      return <p className="text-muted-foreground">Nenhum item encontrado nesta categoria.</p>
+    }
+
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+      {filteredCards.map((card) => {
         const isSelected = selectedCards.some((c) => c.hanzi === card.hanzi)
         const alreadyAdded = isAlreadyAdded(card.hanzi)
         return (
@@ -263,11 +290,12 @@ export function HanziCatalog({
           </button>
         )
       })}
-    </div>
-  )
+      </div>
+    )
+  }
 
   const renderBroadSearchResults = () => {
-    if (!searchTerm.trim()) {
+    if (!globalSearchTerm.trim()) {
       return <p className="text-muted-foreground">Digite um hanzi, pinyin, significado ou código Unicode para buscar.</p>
     }
     if (broadSearchLoading) return <p className="text-muted-foreground">Buscando...</p>
@@ -339,8 +367,8 @@ export function HanziCatalog({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar por hanzi, pinyin ou significado..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={globalSearchTerm}
+              onChange={(e) => setGlobalSearchTerm(e.target.value)}
               className="pl-10"
             />
           </div>
@@ -348,7 +376,7 @@ export function HanziCatalog({
       </header>
 
       <main className="container mx-auto px-4 py-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <div className="flex flex-col lg:flex-row gap-6">
             {/* Filters - Left side */}
             <div className="lg:w-64 order-1 lg:order-1">
@@ -554,13 +582,22 @@ export function HanziCatalog({
 
             {/* Hanzis Grid - Right side */}
             <div className="flex-1 order-2 lg:order-2">
-              <TabsContent value="all" className="space-y-4 mt-0">
-                <h2 className="text-2xl font-bold">Todos os Hanzis</h2>
-                {renderBroadSearchResults()}
-              </TabsContent>
+              {globalSearchTerm.trim() ? (
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-bold">Resultados globais</h2>
+                  {renderBroadSearchResults()}
+                </div>
+              ) : (
+                <>
+                  <TabsContent value="all" className="space-y-4 mt-0">
+                    <h2 className="text-2xl font-bold">Todos os Hanzis</h2>
+                    <p className="text-muted-foreground">
+                      Use a busca geral acima para pesquisar na biblioteca completa.
+                    </p>
+                  </TabsContent>
 
-              {Object.entries(HANZI_CATALOG).map(([category, cards]) => (
-                <TabsContent key={category} value={category} className="space-y-4 mt-0">
+                  {Object.entries(HANZI_CATALOG).map(([category, cards]) => (
+                    <TabsContent key={category} value={category} className="space-y-4 mt-0">
                   <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-bold capitalize">
                       {category === "aulas" && "Básico 1"}
@@ -590,13 +627,14 @@ export function HanziCatalog({
                     </Button>
                   </div>
 
-                  {renderCardGrid(cards)}
-                </TabsContent>
-              ))}
+                      {renderCategorySearch()}
+                      {renderCardGrid(cards)}
+                    </TabsContent>
+                  ))}
 
-              {/* Custom categories content */}
-              {customCategories.map((category) => (
-                <TabsContent key={category.id} value={`custom-${category.id}`} className="space-y-4 mt-0">
+                  {/* Custom categories content */}
+                  {customCategories.map((category) => (
+                    <TabsContent key={category.id} value={`custom-${category.id}`} className="space-y-4 mt-0">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-2 min-w-0">
                       <Star className="h-5 w-5 text-primary shrink-0" />
@@ -621,9 +659,12 @@ export function HanziCatalog({
                     </div>
                   </div>
 
-                  {renderCardGrid(category.cards)}
-                </TabsContent>
-              ))}
+                      {renderCategorySearch()}
+                      {renderCardGrid(category.cards)}
+                    </TabsContent>
+                  ))}
+                </>
+              )}
             </div>
           </div>
         </Tabs>
