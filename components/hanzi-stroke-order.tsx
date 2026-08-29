@@ -13,9 +13,20 @@ type LoadStatus = "loading" | "ready" | "unavailable"
 
 const isSingleHanCharacter = (value: string) => /^\p{Script=Han}$/u.test(value)
 
+function runWriterAction(action: () => void | Promise<unknown>) {
+  try {
+    const result = action()
+    if (result) void Promise.resolve(result).catch(() => undefined)
+  } catch {
+    // Loading failures are represented by the neutral unavailable state.
+  }
+}
+
 export function HanziStrokeOrder({ character }: HanziStrokeOrderProps) {
   const targetRef = useRef<HTMLDivElement>(null)
   const writerRef = useRef<HanziWriterType | null>(null)
+  const characterDataReadyRef = useRef(false)
+  const animationFrameRef = useRef<number | null>(null)
   const [status, setStatus] = useState<LoadStatus>("loading")
 
   useEffect(() => {
@@ -24,6 +35,7 @@ export function HanziStrokeOrder({ character }: HanziStrokeOrderProps) {
     let active = true
     let resizeObserver: ResizeObserver | undefined
     const target = targetRef.current
+    characterDataReadyRef.current = false
     setStatus("loading")
 
     const initialize = async () => {
@@ -42,13 +54,19 @@ export function HanziStrokeOrder({ character }: HanziStrokeOrderProps) {
         delayBetweenStrokes: 350,
         onLoadCharDataSuccess: () => {
           if (!active) return
+          characterDataReadyRef.current = true
           setStatus("ready")
-          requestAnimationFrame(() => {
-            if (active && writerRef.current === writer) void writer.animateCharacter()
+          animationFrameRef.current = requestAnimationFrame(() => {
+            animationFrameRef.current = null
+            if (active && characterDataReadyRef.current && writerRef.current === writer) {
+              runWriterAction(() => writer.animateCharacter())
+            }
           })
         },
         onLoadCharDataError: () => {
-          if (active) setStatus("unavailable")
+          if (!active) return
+          characterDataReadyRef.current = false
+          setStatus("unavailable")
         },
       })
       writerRef.current = writer
@@ -62,17 +80,25 @@ export function HanziStrokeOrder({ character }: HanziStrokeOrderProps) {
     }
 
     void initialize().catch(() => {
-      if (active) setStatus("unavailable")
+      if (!active) return
+      characterDataReadyRef.current = false
+      setStatus("unavailable")
     })
 
     return () => {
       active = false
       resizeObserver?.disconnect()
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = null
+      }
       const writer = writerRef.current
+      const characterDataWasReady = characterDataReadyRef.current
       writerRef.current = null
-      if (writer) {
-        writer.cancelQuiz()
-        void writer.pauseAnimation()
+      characterDataReadyRef.current = false
+      if (writer && characterDataWasReady) {
+        runWriterAction(() => writer.cancelQuiz())
+        runWriterAction(() => writer.pauseAnimation())
       }
       target?.replaceChildren()
     }
@@ -82,7 +108,9 @@ export function HanziStrokeOrder({ character }: HanziStrokeOrderProps) {
 
   const replay = () => {
     const writer = writerRef.current
-    if (writer && status === "ready") void writer.animateCharacter()
+    if (writer && status === "ready" && characterDataReadyRef.current) {
+      runWriterAction(() => writer.animateCharacter())
+    }
   }
 
   return (
