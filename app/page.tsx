@@ -402,6 +402,57 @@ export default function HomePage() {
               </div>
             )}
 
+            <section className="space-y-4 border-t border-border pt-5" aria-labelledby="study-categories-title">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h4 id="study-categories-title" className="text-lg font-semibold">Categorias para estudar</h4>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Selecione categorias personalizadas para incluir na sessão.
+                  </p>
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  {selectedCategoryCards.length} {selectedCategoryCards.length === 1 ? "caractere" : "caracteres"} selecionados
+                </span>
+              </div>
+
+              {customCategories.length > 0 ? (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {customCategories.map((category) => {
+                    const checked = selectedCategoryIds.includes(category.id)
+                    return (
+                      <label
+                        key={category.id}
+                        className={`flex cursor-pointer items-center justify-between gap-3 rounded-lg border p-3 transition-colors ${
+                          checked ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
+                        }`}
+                      >
+                        <span className="flex min-w-0 items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleStudyCategory(category.id)}
+                            className="h-4 w-4 shrink-0 accent-primary"
+                          />
+                          <span className="truncate font-medium">{category.name}</span>
+                        </span>
+                        <span className="shrink-0 text-xs text-muted-foreground">
+                          {category.cards.length} {category.cards.length === 1 ? "card" : "cards"}
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-border p-4">
+                  <p className="text-sm text-muted-foreground">Você ainda não criou categorias personalizadas.</p>
+                  <Button variant="outline" size="sm" onClick={() => setView("catalog")}>
+                    <Library className="mr-2 h-4 w-4" />
+                    Criar categoria
+                  </Button>
+                </div>
+              )}
+            </section>
+
             <div className="flex gap-2 pt-2 border-t border-border">
               <Button
                 onClick={handleExport}
@@ -424,56 +475,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          <section className="rounded-lg border border-border p-6 space-y-4" aria-labelledby="study-categories-title">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h3 id="study-categories-title" className="text-xl font-semibold">Categorias para estudar</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Selecione categorias personalizadas para incluir os caracteres na sessão.
-                </p>
-              </div>
-              <span className="text-sm text-muted-foreground">
-                {selectedCategoryCards.length} {selectedCategoryCards.length === 1 ? "caractere" : "caracteres"} selecionados
-              </span>
-            </div>
-
-            {customCategories.length > 0 ? (
-              <div className="grid gap-2 sm:grid-cols-2">
-                {customCategories.map((category) => {
-                  const checked = selectedCategoryIds.includes(category.id)
-                  return (
-                    <label
-                      key={category.id}
-                      className={`flex cursor-pointer items-center justify-between gap-3 rounded-lg border p-3 transition-colors ${
-                        checked ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
-                      }`}
-                    >
-                      <span className="flex min-w-0 items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleStudyCategory(category.id)}
-                          className="h-4 w-4 shrink-0 accent-primary"
-                        />
-                        <span className="truncate font-medium">{category.name}</span>
-                      </span>
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        {category.cards.length} {category.cards.length === 1 ? "card" : "cards"}
-                      </span>
-                    </label>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-border p-4">
-                <p className="text-sm text-muted-foreground">Você ainda não criou categorias personalizadas.</p>
-                <Button variant="outline" size="sm" onClick={() => setView("catalog")}>
-                  <Library className="mr-2 h-4 w-4" />
-                  Criar categoria
-                </Button>
-              </div>
-            )}
-          </section>
 
           <div className="grid gap-4 md:grid-cols-2">
             <Button
