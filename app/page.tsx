@@ -4,8 +4,9 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Moon, Sun, BookOpen, Plus, Play, Download, Upload, Library, Trash2, X, FileText } from "lucide-react"
-import { FlashcardCreator } from "@/components/flashcard-creator"
+import { Input } from "@/components/ui/input"
+import { Moon, Sun, BookOpen, Plus, Play, Download, Upload, Library, Trash2, FileText, Search, LoaderCircle } from "lucide-react"
+import type { HanziCharacterSearchResult } from "@/lib/hanzi-character"
 import { StudyMode } from "@/components/study-mode"
 import { ResultsScreen } from "@/components/results-screen"
 import { HanziCatalog } from "@/components/hanzi-catalog"
@@ -13,13 +14,17 @@ import { HanziCatalog } from "@/components/hanzi-catalog"
 export default function HomePage() {
   const [darkMode, setDarkMode] = useState(false)
   const [studyMode, setStudyMode] = useState<"reading" | "writing">("reading")
-  const [view, setView] = useState<"home" | "create" | "study" | "results" | "catalog">("home")
+  const [view, setView] = useState<"home" | "study" | "results" | "catalog">("home")
   const [flashcards, setFlashcards] = useState<any[]>([])
+  const [hanziSearchQuery, setHanziSearchQuery] = useState("")
+  const [hanziSearchResults, setHanziSearchResults] = useState<HanziCharacterSearchResult[]>([])
+  const [isSearchingHanzi, setIsSearchingHanzi] = useState(false)
+  const [hasSearchedHanzi, setHasSearchedHanzi] = useState(false)
+  const [hanziSearchError, setHanziSearchError] = useState("")
   const [customCategories, setCustomCategories] = useState<{ id: string; name: string; cards: any[] }[]>([])
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
   const [studyingErrors, setStudyingErrors] = useState(false)
   const [studyResults, setStudyResults] = useState<any>(null)
-  const [showCreateModal, setShowCreateModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null)
   const [showClearAllModal, setShowClearAllModal] = useState(false)
@@ -226,31 +231,41 @@ export default function HomePage() {
     handleSaveFlashcards(newCards)
   }
 
-  const handleCreateClick = () => {
-    setShowCreateModal(true)
+  const handleHanziSearch = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const query = hanziSearchQuery.trim()
+    if (!query) return
+
+    setIsSearchingHanzi(true)
+    setHanziSearchError("")
+    setHanziSearchResults([])
+    setHasSearchedHanzi(false)
+
+    try {
+      const response = await fetch(`/api/hanzi/search?q=${encodeURIComponent(query)}&limit=12`)
+      if (!response.ok) throw new Error("Não foi possível pesquisar agora.")
+      const data = await response.json()
+      setHanziSearchResults(Array.isArray(data.results) ? data.results : [])
+      setHasSearchedHanzi(true)
+    } catch {
+      setHanziSearchError("Não foi possível pesquisar agora. Tente novamente.")
+      setHanziSearchResults([])
+    } finally {
+      setIsSearchingHanzi(false)
+    }
   }
 
-  const handleManualCreate = () => {
-    setShowCreateModal(false)
-    setView("create")
-  }
+  const handleAddSearchResult = (result: HanziCharacterSearchResult) => {
+    if (flashcards.some((card) => card.hanzi === result.character)) return
 
-  const handleCatalogCreate = () => {
-    setShowCreateModal(false)
-    setView("catalog")
-  }
-
-  if (view === "create") {
-    return (
-      <FlashcardCreator
-        flashcards={flashcards}
-        onSave={handleSaveFlashcards}
-        onBack={() => setView("home")}
-        darkMode={darkMode}
-        onClearAll={handleClearAll}
-        onStartStudy={() => setView("study")}
-      />
-    )
+    handleSaveFlashcards([
+      ...flashcards,
+      {
+        hanzi: result.character,
+        pinyin: result.pinyin?.join(", ") ?? "",
+        meaning: result.meanings?.join("; ") ?? "",
+      },
+    ])
   }
 
   if (view === "study") {
@@ -351,20 +366,85 @@ export default function HomePage() {
             <div className="text-center space-y-4 lg:text-left">
             <h2 className="text-4xl font-bold text-balance">Domine os Caracteres Chineses</h2>
             <p className="text-lg text-muted-foreground text-pretty">
-              Aprenda Hanzi de forma eficiente com flashcards interativos. Escolha caracteres do catálogo ou crie seus
-              próprios.
+              Aprenda Hanzi de forma eficiente com flashcards interativos. Pesquise e adicione caracteres direto à sua coleção.
             </p>
-          </div>
+            </div>
+
+            <section className="rounded-lg border border-border bg-card p-5 sm:p-6" aria-labelledby="hanzi-search-title">
+              <div className="mb-4">
+                <h3 id="hanzi-search-title" className="text-lg font-semibold">Adicionar Hanzi rapidamente</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Pesquise por caractere, pinyin ou significado e adicione direto aos seus flashcards.</p>
+              </div>
+              <form onSubmit={handleHanziSearch} className="flex flex-col gap-2 sm:flex-row">
+                <label htmlFor="home-hanzi-search" className="sr-only">Pesquisar Hanzi, pinyin ou significado</label>
+                <div className="relative min-w-0 flex-1">
+                  <Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="home-hanzi-search"
+                    value={hanziSearchQuery}
+                    onChange={(event) => setHanziSearchQuery(event.target.value)}
+                    placeholder="Ex.: 水, shuǐ ou água"
+                    className="pl-9"
+                  />
+                </div>
+                <Button type="submit" disabled={!hanziSearchQuery.trim() || isSearchingHanzi}>
+                  {isSearchingHanzi ? <LoaderCircle aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" /> : <Search aria-hidden="true" className="mr-2 h-4 w-4" />}
+                  Pesquisar
+                </Button>
+              </form>
+
+              <div className="mt-4" aria-live="polite">
+                {hanziSearchError && <p className="text-sm text-destructive">{hanziSearchError}</p>}
+                {hasSearchedHanzi && hanziSearchResults.length === 0 && !hanziSearchError && (
+                  <p className="text-sm text-muted-foreground">Nenhum Hanzi encontrado para essa busca.</p>
+                )}
+                {hanziSearchResults.length > 0 && (
+                  <ul className="grid gap-2 sm:grid-cols-2">
+                    {hanziSearchResults.map((result) => {
+                      const alreadyAdded = flashcards.some((card) => card.hanzi === result.character)
+                      return (
+                        <li key={result.character} className="flex min-w-0 items-center justify-between gap-3 rounded-md border border-border p-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span lang="zh" className="text-3xl leading-none">{result.character}</span>
+                            <span className="min-w-0">
+                              <span className="block truncate text-sm font-medium">{result.pinyin?.join(", ") || "Pinyin indisponível"}</span>
+                              <span className="block truncate text-xs text-muted-foreground">{result.meanings?.join("; ") || "Significado indisponível"}</span>
+                            </span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant={alreadyAdded ? "secondary" : "outline"}
+                            size="sm"
+                            disabled={alreadyAdded}
+                            onClick={() => handleAddSearchResult(result)}
+                            aria-label={alreadyAdded ? `${result.character} já está nos flashcards` : `Adicionar ${result.character} aos flashcards`}
+                          >
+                            {alreadyAdded ? "Adicionado" : <><Plus aria-hidden="true" className="mr-1 h-4 w-4" />Adicionar</>}
+                          </Button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </div>
+            </section>
 
           <div className="border border-border rounded-lg p-6 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-xl font-semibold">Seus Flashcards</h3>
-              {flashcards.length > 0 && (
-                <Button variant="destructive" size="sm" onClick={handleClearAll}>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Limpar Tudo
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setView("catalog")}>
+                  <Library aria-hidden="true" className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Adicionar da biblioteca</span>
+                  <span className="sm:hidden">Biblioteca</span>
                 </Button>
-              )}
+                {flashcards.length > 0 && (
+                  <Button variant="destructive" size="sm" onClick={handleClearAll}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Limpar Tudo
+                  </Button>
+                )}
+              </div>
             </div>
 
             {flashcards.length > 0 ? (
@@ -399,7 +479,7 @@ export default function HomePage() {
               <div className="py-12 text-center text-muted-foreground space-y-2">
                 <FileText className="h-12 w-12 mx-auto opacity-50" />
                 <p className="text-sm">Nenhum flashcard adicionado ainda</p>
-                <p className="text-xs">Comece criando seus flashcards abaixo</p>
+                  <p className="text-xs">Pesquise um caractere acima para começar</p>
               </div>
             )}
 
@@ -479,13 +559,13 @@ export default function HomePage() {
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
             <Button
-              onClick={handleCreateClick}
+              onClick={() => setView("catalog")}
               className="h-32 flex flex-col gap-2 text-lg bg-transparent"
               variant="outline"
             >
-              <Plus className="h-8 w-8" />
-              <span>Criar Flashcards</span>
-              <span className="text-xs text-muted-foreground">Adicione caracteres</span>
+              <Library className="h-8 w-8" />
+              <span>Biblioteca</span>
+              <span className="text-xs text-muted-foreground">Explore todos os Hanzis</span>
             </Button>
 
             <Button
@@ -519,57 +599,6 @@ export default function HomePage() {
               <Button onClick={confirmImport} variant="destructive" className="flex-1">
                 Confirmar Importação
               </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card border-2 border-border rounded-xl p-8 max-w-2xl w-full shadow-2xl relative">
-            <button
-              onClick={() => setShowCreateModal(false)}
-              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Fechar"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <div className="space-y-2 mb-6">
-              <h3 className="text-2xl font-bold">Como deseja adicionar flashcards?</h3>
-              <p className="text-muted-foreground">Escolha entre criar manualmente ou selecionar do catálogo</p>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <button
-                onClick={handleManualCreate}
-                className="group border-2 border-border hover:border-primary rounded-lg p-6 space-y-4 transition-all hover:shadow-lg bg-card"
-              >
-                <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                  <Plus className="h-8 w-8 text-primary" />
-                </div>
-                <div className="space-y-2">
-                  <h4 className="text-xl font-semibold">Adicionar Manualmente</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Digite o pinyin e selecione os caracteres com autocomplete
-                  </p>
-                </div>
-              </button>
-
-              <button
-                onClick={handleCatalogCreate}
-                className="group border-2 border-border hover:border-primary rounded-lg p-6 space-y-4 transition-all hover:shadow-lg bg-card"
-              >
-                <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                  <Library className="h-8 w-8 text-primary" />
-                </div>
-                <div className="space-y-2">
-                  <h4 className="text-xl font-semibold">Selecionar do Catálogo</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Escolha entre mais de 1000 caracteres organizados por categoria
-                  </p>
-                </div>
-              </button>
             </div>
           </div>
         </div>
