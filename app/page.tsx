@@ -346,8 +346,9 @@ export default function HomePage() {
       </header>
 
       <main className="container mx-auto px-4 py-12">
-        <div className="max-w-2xl mx-auto space-y-8">
-          <div className="text-center space-y-4">
+        <div className="mx-auto grid w-full max-w-6xl grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.38fr)] lg:items-start">
+          <div className="min-w-0 space-y-8">
+            <div className="text-center space-y-4 lg:text-left">
             <h2 className="text-4xl font-bold text-balance">Domine os Caracteres Chineses</h2>
             <p className="text-lg text-muted-foreground text-pretty">
               Aprenda Hanzi de forma eficiente com flashcards interativos. Escolha caracteres do catálogo ou crie seus
@@ -474,9 +475,9 @@ export default function HomePage() {
               <input id="import-input" type="file" accept=".json" onChange={handleImport} className="hidden" />
             </div>
           </div>
+          </div>
 
-
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
             <Button
               onClick={handleCreateClick}
               className="h-32 flex flex-col gap-2 text-lg bg-transparent"
