@@ -15,6 +15,8 @@ export default function HomePage() {
   const [studyMode, setStudyMode] = useState<"reading" | "writing">("reading")
   const [view, setView] = useState<"home" | "create" | "study" | "results" | "catalog">("home")
   const [flashcards, setFlashcards] = useState<any[]>([])
+  const [customCategories, setCustomCategories] = useState<{ id: string; name: string; cards: any[] }[]>([])
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
   const [studyingErrors, setStudyingErrors] = useState(false)
   const [studyResults, setStudyResults] = useState<any>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -36,6 +38,30 @@ export default function HomePage() {
     const savedCards = localStorage.getItem("hanziFlashcards")
     if (savedCards) {
       setFlashcards(JSON.parse(savedCards))
+    }
+
+    const savedCategoryIds = localStorage.getItem("selectedCustomCategoryIds")
+    if (savedCategoryIds) {
+      try {
+        const parsedIds = JSON.parse(savedCategoryIds)
+        if (Array.isArray(parsedIds)) setSelectedCategoryIds(parsedIds.filter((id) => typeof id === "string"))
+      } catch {
+        setSelectedCategoryIds([])
+      }
+    }
+
+    const savedCategories = localStorage.getItem("customHanziCategories")
+    if (savedCategories) {
+      try {
+        const parsedCategories = JSON.parse(savedCategories)
+        if (Array.isArray(parsedCategories)) {
+          setCustomCategories(parsedCategories.filter((category) =>
+            category && typeof category.id === "string" && typeof category.name === "string" && Array.isArray(category.cards),
+          ))
+        }
+      } catch {
+        setCustomCategories([])
+      }
     }
   }, [])
 
@@ -59,6 +85,39 @@ export default function HomePage() {
     setStudyResults(results)
     setView("results")
   }
+
+  const toggleStudyCategory = (categoryId: string) => {
+    setSelectedCategoryIds((current) => {
+      const next = current.includes(categoryId)
+        ? current.filter((id) => id !== categoryId)
+        : [...current, categoryId]
+      localStorage.setItem("selectedCustomCategoryIds", JSON.stringify(next))
+      return next
+    })
+  }
+
+  const refreshCustomCategories = () => {
+    try {
+      const saved = localStorage.getItem("customHanziCategories")
+      const parsed = saved ? JSON.parse(saved) : []
+      setCustomCategories(Array.isArray(parsed) ? parsed : [])
+    } catch {
+      setCustomCategories([])
+    }
+  }
+
+  const selectedCategoryCards = Array.from(
+    new Map(
+      customCategories
+        .filter((category) => selectedCategoryIds.includes(category.id))
+        .flatMap((category) => category.cards)
+        .map((card) => [card.hanzi, card]),
+    ).values(),
+  )
+
+  const sessionFlashcards = Array.from(
+    new Map([...selectedCategoryCards, ...flashcards].map((card) => [card.hanzi, card])).values(),
+  )
 
   const handleExport = () => {
     const dataStr = JSON.stringify({ flashcards, darkMode, studyMode }, null, 2)
@@ -195,7 +254,7 @@ export default function HomePage() {
   }
 
   if (view === "study") {
-    const cardsToStudy = studyingErrors && studyResults?.incorrect?.length > 0 ? studyResults.incorrect : flashcards
+    const cardsToStudy = studyingErrors && studyResults?.incorrect?.length > 0 ? studyResults.incorrect : sessionFlashcards
 
     return (
         <StudyMode
@@ -236,7 +295,10 @@ export default function HomePage() {
     return (
       <HanziCatalog
         onAddCards={handleAddFromCatalog}
-        onClose={() => setView("home")}
+        onClose={() => {
+          refreshCustomCategories()
+          setView("home")
+        }}
         existingFlashcards={flashcards}
         onRemoveCard={handleRemoveCardByHanzi}
       />
@@ -362,6 +424,57 @@ export default function HomePage() {
             </div>
           </div>
 
+          <section className="rounded-lg border border-border p-6 space-y-4" aria-labelledby="study-categories-title">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 id="study-categories-title" className="text-xl font-semibold">Categorias para estudar</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Selecione categorias personalizadas para incluir os caracteres na sessão.
+                </p>
+              </div>
+              <span className="text-sm text-muted-foreground">
+                {selectedCategoryCards.length} {selectedCategoryCards.length === 1 ? "caractere" : "caracteres"} selecionados
+              </span>
+            </div>
+
+            {customCategories.length > 0 ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {customCategories.map((category) => {
+                  const checked = selectedCategoryIds.includes(category.id)
+                  return (
+                    <label
+                      key={category.id}
+                      className={`flex cursor-pointer items-center justify-between gap-3 rounded-lg border p-3 transition-colors ${
+                        checked ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
+                      }`}
+                    >
+                      <span className="flex min-w-0 items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleStudyCategory(category.id)}
+                          className="h-4 w-4 shrink-0 accent-primary"
+                        />
+                        <span className="truncate font-medium">{category.name}</span>
+                      </span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {category.cards.length} {category.cards.length === 1 ? "card" : "cards"}
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-border p-4">
+                <p className="text-sm text-muted-foreground">Você ainda não criou categorias personalizadas.</p>
+                <Button variant="outline" size="sm" onClick={() => setView("catalog")}>
+                  <Library className="mr-2 h-4 w-4" />
+                  Criar categoria
+                </Button>
+              </div>
+            )}
+          </section>
+
           <div className="grid gap-4 md:grid-cols-2">
             <Button
               onClick={handleCreateClick}
@@ -375,13 +488,13 @@ export default function HomePage() {
 
             <Button
               onClick={() => setView("study")}
-              disabled={flashcards.length === 0}
+              disabled={sessionFlashcards.length === 0}
               className="h-32 flex flex-col gap-2 text-lg"
             >
               <Play className="h-8 w-8" />
               <span>Estudar</span>
               <span className="text-xs">
-                {flashcards.length} {flashcards.length === 1 ? "card" : "cards"}
+                {sessionFlashcards.length} {sessionFlashcards.length === 1 ? "card" : "cards"}
               </span>
             </Button>
           </div>
