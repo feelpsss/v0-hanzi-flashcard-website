@@ -43,6 +43,7 @@ export function HanziCatalog({
   const [newCategoryName, setNewCategoryName] = useState("")
   const [categorySelection, setCategorySelection] = useState<any[]>([])
   const [categoryModalSearch, setCategoryModalSearch] = useState("")
+  const [customCategorySearch, setCustomCategorySearch] = useState<Record<string, string>>({})
   const [categoryToDelete, setCategoryToDelete] = useState<{ id: string; name: string } | null>(null)
   const [broadResults, setBroadResults] = useState<HanziCharacterSearchResult[]>([])
   const [broadSearchLoading, setBroadSearchLoading] = useState(false)
@@ -137,6 +138,15 @@ export function HanziCatalog({
     persistCustomCategories([...customCategories, newCategory])
     setShowCategoryModal(false)
     setActiveTab(`custom-${newCategory.id}`)
+  }
+
+  const addCardToCustomCategory = (categoryId: string, card: any) => {
+    const updatedCategories = customCategories.map((category) =>
+      category.id === categoryId && !category.cards.some((existingCard) => existingCard.hanzi === card.hanzi)
+        ? { ...category, cards: [...category.cards, card] }
+        : category,
+    )
+    persistCustomCategories(updatedCategories)
   }
 
   const handleDeleteCategory = (id: string) => {
@@ -620,6 +630,71 @@ export function HanziCatalog({
                       </Button>
                     </div>
                   </div>
+
+                  <section className="space-y-3 rounded-lg border border-border p-4" aria-label={`Adicionar hanzi à categoria ${category.name}`}>
+                    <div>
+                      <h3 className="font-semibold">Adicionar da biblioteca</h3>
+                      <p className="text-sm text-muted-foreground">Pesquise por hanzi, pinyin ou significado.</p>
+                    </div>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                      <Input
+                        aria-label={`Buscar hanzi para adicionar à categoria ${category.name}`}
+                        placeholder="Buscar na biblioteca..."
+                        value={customCategorySearch[category.id] ?? ""}
+                        onChange={(event) =>
+                          setCustomCategorySearch((current) => ({ ...current, [category.id]: event.target.value }))
+                        }
+                        className="pl-10"
+                      />
+                    </div>
+                    {(() => {
+                      const term = (customCategorySearch[category.id] ?? "").trim().toLowerCase()
+                      if (!term) return null
+
+                      const matches = allCatalogCards
+                        .filter(
+                          (card) =>
+                            card.hanzi.includes(term) ||
+                            card.pinyin.toLowerCase().includes(term) ||
+                            card.meaning.toLowerCase().includes(term),
+                        )
+                        .slice(0, 12)
+
+                      if (matches.length === 0) {
+                        return <p className="text-sm text-muted-foreground">Nenhum hanzi encontrado na biblioteca.</p>
+                      }
+
+                      return (
+                        <div className="max-h-80 overflow-y-auto rounded-md border border-border divide-y divide-border">
+                          {matches.map((card) => {
+                            const alreadyInCategory = category.cards.some((item) => item.hanzi === card.hanzi)
+                            return (
+                              <div key={card.hanzi} className="flex items-center justify-between gap-3 p-3">
+                                <div className="flex min-w-0 items-center gap-3">
+                                  <span className="text-2xl" lang="zh">{card.hanzi}</span>
+                                  <span className="min-w-0">
+                                    <span className="block text-sm font-medium">{card.pinyin}</span>
+                                    <span className="block truncate text-xs text-muted-foreground">{card.meaning}</span>
+                                  </span>
+                                </div>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant={alreadyInCategory ? "secondary" : "outline"}
+                                  disabled={alreadyInCategory}
+                                  onClick={() => addCardToCustomCategory(category.id, card)}
+                                >
+                                  {alreadyInCategory ? <Check className="mr-1 h-4 w-4" /> : <Plus className="mr-1 h-4 w-4" />}
+                                  {alreadyInCategory ? "Adicionado" : "Adicionar"}
+                                </Button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )
+                    })()}
+                  </section>
 
                   {renderCardGrid(category.cards)}
                 </TabsContent>
