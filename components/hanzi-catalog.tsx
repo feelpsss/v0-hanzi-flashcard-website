@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
+import type { DragEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -8,6 +9,7 @@ import { HanziStrokeOrder } from "@/components/hanzi-stroke-order"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, Search, Plus, Check, X, FolderPlus, Trash2, Star } from "lucide-react"
 import { HANZI_CATALOG } from "@/lib/hanzi-data"
+import { cn } from "@/lib/utils"
 import type { HanziCharacterSearchResult } from "@/lib/hanzi-character"
 
 interface HanziCatalogProps {
@@ -29,7 +31,7 @@ export function HanziCatalog({
 }: HanziCatalogProps) {
   const [selectedCards, setSelectedCards] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [activeTab, setActiveTab] = useState("aulas")
+  const [activeTab, setActiveTab] = useState("all")
   const [snackbar, setSnackbar] = useState<{ message: string; visible: boolean }>({
     message: "",
     visible: false,
@@ -43,57 +45,215 @@ export function HanziCatalog({
   const [newCategoryName, setNewCategoryName] = useState("")
   const [categorySelection, setCategorySelection] = useState<any[]>([])
   const [categoryModalSearch, setCategoryModalSearch] = useState("")
+  const [customCategorySearch, setCustomCategorySearch] = useState<Record<string, string>>({})
   const [categoryToDelete, setCategoryToDelete] = useState<{ id: string; name: string } | null>(null)
   const [broadResults, setBroadResults] = useState<HanziCharacterSearchResult[]>([])
   const [broadSearchLoading, setBroadSearchLoading] = useState(false)
   const [broadSearchError, setBroadSearchError] = useState(false)
+  const [broadSearchHasMore, setBroadSearchHasMore] = useState(false)
+  const broadSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const broadSearchControllerRef = useRef<AbortController | null>(null)
+  const broadSearchRequestRef = useRef(0)
+  const activeTabBeforeSearchRef = useRef<string | null>(null)
   const [selectedBroadHanzi, setSelectedBroadHanzi] = useState<HanziCharacterSearchResult | null>(null)
+  const [customCategorySearchResults, setCustomCategorySearchResults] = useState<Record<string, HanziCharacterSearchResult[]>>({})
+  const [customCategorySearchLoading, setCustomCategorySearchLoading] = useState<Record<string, boolean>>({})
+  const [customCategorySearchError, setCustomCategorySearchError] = useState<Record<string, boolean>>({})
+  const [customCategorySearchHasMore, setCustomCategorySearchHasMore] = useState<Record<string, boolean>>({})
+  const customSearchTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>())
+  const customSearchControllersRef = useRef(new Map<string, AbortController>())
+  const customSearchRequestsRef = useRef(new Map<string, number>())
+  const [dragOverCategoryId, setDragOverCategoryId] = useState<string | null>(null)
 
   useEffect(() => {
+    let savedCategories: { id: string; name: string; cards: any[] }[] = []
     const saved = localStorage.getItem("customHanziCategories")
     if (saved) {
       try {
-        setCustomCategories(JSON.parse(saved))
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed)) savedCategories = parsed
       } catch {
         // ignore corrupted data
       }
     }
+
+    if (localStorage.getItem("basic-one-category-migrated") !== "true") {
+      const legacyCards = HANZI_CATALOG.aulas ?? []
+      if (legacyCards.length > 0 && !savedCategories.some((category) => category.name === "Básico 1")) {
+        savedCategories = [...savedCategories, { id: "cat-basic-one", name: "Básico 1", cards: legacyCards }]
+        localStorage.setItem("customHanziCategories", JSON.stringify(savedCategories))
+      }
+      localStorage.setItem("basic-one-category-migrated", "true")
+    }
+
+    setCustomCategories(savedCategories)
+    void runBroadSearch("")
   }, [])
 
-  useEffect(() => {
-    if (activeTab !== "all" || !searchTerm.trim()) {
-      setBroadResults([])
-      setBroadSearchLoading(false)
-      setBroadSearchError(false)
+  useEffect(() => () => {
+    if (broadSearchTimerRef.current) clearTimeout(broadSearchTimerRef.current)
+    broadSearchControllerRef.current?.abort()
+    customSearchTimersRef.current.forEach((timer) => clearTimeout(timer))
+    customSearchControllersRef.current.forEach((controller) => controller.abort())
+  }, [])
+
+  const runBroadSearch = async (query: string, offset = 0, append = false) => {
+    const requestId = ++broadSearchRequestRef.current
+    broadSearchControllerRef.current?.abort()
+    const controller = new AbortController()
+    broadSearchControllerRef.current = controller
+    setBroadSearchLoading(true)
+    setBroadSearchError(false)
+
+    try {
+      const response = await fetch(
+        `/api/hanzi/search?q=${encodeURIComponent(query)}&limit=50&offset=${offset}`,
+        { signal: controller.signal },
+      )
+      if (!response.ok) throw new Error("Search request failed")
+      const payload = (await response.json()) as { results: HanziCharacterSearchResult[]; hasMore: boolean }
+      if (requestId !== broadSearchRequestRef.current) return
+      setBroadResults((current) => append ? [...current, ...payload.results] : payload.results)
+      setBroadSearchHasMore(payload.hasMore)
+    } catch {
+      if (!controller.signal.aborted && requestId === broadSearchRequestRef.current) {
+        if (!append) {
+          setBroadResults([])
+          setBroadSearchHasMore(false)
+        }
+        setBroadSearchError(true)
+      }
+    } finally {
+      if (requestId === broadSearchRequestRef.current) setBroadSearchLoading(false)
+    }
+  }
+
+  const handleLibrarySearchChange = (value: string) => {
+    if (!searchTerm.trim() && value.trim()) activeTabBeforeSearchRef.current = activeTab
+    setSearchTerm(value)
+    if (broadSearchTimerRef.current) clearTimeout(broadSearchTimerRef.current)
+    broadSearchControllerRef.current?.abort()
+    broadSearchRequestRef.current += 1
+    setBroadResults([])
+    setBroadSearchHasMore(false)
+    setBroadSearchError(false)
+
+    const query = value.trim()
+    if (!query) {
+      const previousTab = activeTabBeforeSearchRef.current
+      if (previousTab) setActiveTab(previousTab)
+      activeTabBeforeSearchRef.current = null
+      if (!previousTab || previousTab === "all") void runBroadSearch("")
+      else setBroadSearchLoading(false)
       return
     }
 
-    const controller = new AbortController()
-    const timeout = setTimeout(async () => {
-      setBroadSearchLoading(true)
-      setBroadSearchError(false)
-      try {
-        const response = await fetch(`/api/hanzi/search?q=${encodeURIComponent(searchTerm.trim())}`, {
-          signal: controller.signal,
-        })
-        if (!response.ok) throw new Error("Search request failed")
-        const payload = (await response.json()) as { results: HanziCharacterSearchResult[] }
-        setBroadResults(payload.results)
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          setBroadResults([])
-          setBroadSearchError(true)
-        }
-      } finally {
-        if (!controller.signal.aborted) setBroadSearchLoading(false)
-      }
-    }, 300)
+    setActiveTab("all")
+    setBroadSearchLoading(true)
+    broadSearchTimerRef.current = setTimeout(() => void runBroadSearch(query), 140)
+  }
 
-    return () => {
-      clearTimeout(timeout)
-      controller.abort()
+  const loadMoreBroadResults = () => {
+    if (!broadSearchLoading && broadSearchHasMore) {
+      void runBroadSearch(searchTerm.trim(), broadResults.length, true)
     }
-  }, [activeTab, searchTerm])
+  }
+
+  const runCustomCategorySearch = async (categoryId: string, query: string, offset = 0, append = false) => {
+    const requestId = (customSearchRequestsRef.current.get(categoryId) ?? 0) + 1
+    customSearchRequestsRef.current.set(categoryId, requestId)
+    customSearchControllersRef.current.get(categoryId)?.abort()
+    const controller = new AbortController()
+    customSearchControllersRef.current.set(categoryId, controller)
+    setCustomCategorySearchLoading((current) => ({ ...current, [categoryId]: true }))
+    setCustomCategorySearchError((current) => ({ ...current, [categoryId]: false }))
+
+    try {
+      const response = await fetch(
+        `/api/hanzi/search?q=${encodeURIComponent(query)}&limit=50&offset=${offset}`,
+        { signal: controller.signal },
+      )
+      if (!response.ok) throw new Error("Search request failed")
+      const payload = (await response.json()) as { results: HanziCharacterSearchResult[]; hasMore: boolean }
+      if (requestId !== customSearchRequestsRef.current.get(categoryId)) return
+      setCustomCategorySearchResults((current) => ({
+        ...current,
+        [categoryId]: append ? [...(current[categoryId] ?? []), ...payload.results] : payload.results,
+      }))
+      setCustomCategorySearchHasMore((current) => ({ ...current, [categoryId]: payload.hasMore }))
+    } catch {
+      if (!controller.signal.aborted && requestId === customSearchRequestsRef.current.get(categoryId)) {
+        if (!append) {
+          setCustomCategorySearchResults((current) => ({ ...current, [categoryId]: [] }))
+          setCustomCategorySearchHasMore((current) => ({ ...current, [categoryId]: false }))
+        }
+        setCustomCategorySearchError((current) => ({ ...current, [categoryId]: true }))
+      }
+    } finally {
+      if (requestId === customSearchRequestsRef.current.get(categoryId)) {
+        setCustomCategorySearchLoading((current) => ({ ...current, [categoryId]: false }))
+      }
+    }
+  }
+
+  const handleCustomCategorySearchChange = (categoryId: string, value: string) => {
+    setCustomCategorySearch((current) => ({ ...current, [categoryId]: value }))
+    const timer = customSearchTimersRef.current.get(categoryId)
+    if (timer) clearTimeout(timer)
+    customSearchControllersRef.current.get(categoryId)?.abort()
+    customSearchRequestsRef.current.set(categoryId, (customSearchRequestsRef.current.get(categoryId) ?? 0) + 1)
+    setCustomCategorySearchResults((current) => ({ ...current, [categoryId]: [] }))
+    setCustomCategorySearchHasMore((current) => ({ ...current, [categoryId]: false }))
+    setCustomCategorySearchError((current) => ({ ...current, [categoryId]: false }))
+
+    const query = value.trim()
+    if (!query) {
+      setCustomCategorySearchLoading((current) => ({ ...current, [categoryId]: false }))
+      return
+    }
+
+    setCustomCategorySearchLoading((current) => ({ ...current, [categoryId]: true }))
+    customSearchTimersRef.current.set(categoryId, setTimeout(() => {
+      void runCustomCategorySearch(categoryId, query)
+    }, 140))
+  }
+
+  const loadMoreCustomCategoryResults = (categoryId: string) => {
+    const results = customCategorySearchResults[categoryId] ?? []
+    if (!customCategorySearchLoading[categoryId] && customCategorySearchHasMore[categoryId]) {
+      void runCustomCategorySearch(categoryId, (customCategorySearch[categoryId] ?? "").trim(), results.length, true)
+    }
+  }
+
+  const handleCardDragStart = (event: DragEvent<HTMLElement>, card: any) => {
+    const draggedCard = "character" in card
+      ? { hanzi: card.character, pinyin: card.pinyin?.join(", ") ?? "", meaning: card.meanings?.join("; ") ?? "" }
+      : { hanzi: card.hanzi, pinyin: card.pinyin ?? "", meaning: card.meaning ?? "" }
+    event.dataTransfer.setData("text/plain", JSON.stringify(draggedCard))
+    event.dataTransfer.effectAllowed = "copy"
+  }
+
+  const handleCategoryDragOver = (event: DragEvent<HTMLElement>, categoryId: string) => {
+    event.preventDefault()
+    event.dataTransfer.dropEffect = "copy"
+    setDragOverCategoryId((current) => current === categoryId ? current : categoryId)
+  }
+
+  const handleCategoryDrop = (event: DragEvent<HTMLElement>, categoryId: string) => {
+    event.preventDefault()
+    setDragOverCategoryId(null)
+    try {
+      const droppedCard = JSON.parse(event.dataTransfer.getData("text/plain")) as { hanzi?: string; pinyin?: string; meaning?: string }
+      if (typeof droppedCard.hanzi !== "string" || !droppedCard.hanzi) return
+      addCardToCustomCategory(categoryId, {
+        hanzi: droppedCard.hanzi,
+        pinyin: typeof droppedCard.pinyin === "string" ? droppedCard.pinyin : "",
+        meaning: typeof droppedCard.meaning === "string" ? droppedCard.meaning : "",
+      })
+    } catch {
+      setDragOverCategoryId(null)
+    }
+  }
 
   const persistCustomCategories = (categories: { id: string; name: string; cards: any[] }[]) => {
     setCustomCategories(categories)
@@ -136,7 +296,22 @@ export function HanziCatalog({
     }
     persistCustomCategories([...customCategories, newCategory])
     setShowCategoryModal(false)
-    setActiveTab(`custom-${newCategory.id}`)
+    const newCategoryTab = `custom-${newCategory.id}`
+    if (searchTerm.trim()) {
+      activeTabBeforeSearchRef.current = newCategoryTab
+      setActiveTab("all")
+    } else {
+      setActiveTab(newCategoryTab)
+    }
+  }
+
+  const addCardToCustomCategory = (categoryId: string, card: any) => {
+    const updatedCategories = customCategories.map((category) =>
+      category.id === categoryId && !category.cards.some((existingCard) => existingCard.hanzi === card.hanzi)
+        ? { ...category, cards: [...category.cards, card] }
+        : category,
+    )
+    persistCustomCategories(updatedCategories)
   }
 
   const handleDeleteCategory = (id: string) => {
@@ -231,6 +406,9 @@ export function HanziCatalog({
         return (
           <button
             key={card.hanzi}
+            draggable
+            onDragStart={(event) => handleCardDragStart(event, card)}
+            onDragEnd={() => setDragOverCategoryId(null)}
             onClick={() => toggleCard(card)}
             className={`
               group relative p-4 border-2 rounded-lg transition-all hover:shadow-lg
@@ -252,8 +430,12 @@ export function HanziCatalog({
               <X className="h-3 w-3 hidden group-hover:block" />
             </div>
             <div className="text-4xl mb-2 text-center">{card.hanzi}</div>
-            <div className="text-sm text-muted-foreground text-center">{card.pinyin}</div>
-            <div className="text-xs text-muted-foreground text-center mt-1 text-balance">{card.meaning}</div>
+            <div className="text-sm text-muted-foreground text-center">
+              {card.pinyin.trim() || "Leitura não cadastrada"}
+            </div>
+            <div className="text-xs text-muted-foreground text-center mt-1 text-balance">
+              {card.meaning.trim() || "Significado não cadastrado"}
+            </div>
             {alreadyAdded && (
               <div className="text-xs text-green-600 dark:text-green-400 group-hover:text-red-600 dark:group-hover:text-red-400 font-semibold text-center mt-2 transition-colors">
                 <span className="group-hover:hidden">Adicionado</span>
@@ -267,35 +449,47 @@ export function HanziCatalog({
   )
 
   const renderBroadSearchResults = () => {
-    if (!searchTerm.trim()) {
-      return <p className="text-muted-foreground">Digite um hanzi, pinyin, significado ou código Unicode para buscar.</p>
-    }
-    if (broadSearchLoading) return <p className="text-muted-foreground">Buscando...</p>
-    if (broadSearchError) return <p className="text-muted-foreground">Não foi possível concluir a busca.</p>
+    if (broadSearchError && broadResults.length === 0) return <p className="text-muted-foreground">Não foi possível concluir a busca.</p>
+    if (broadResults.length === 0 && broadSearchLoading) return <p className="text-muted-foreground">Buscando no catálogo completo...</p>
     if (broadResults.length === 0) return <p className="text-muted-foreground">Nenhum hanzi encontrado.</p>
 
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
-        {broadResults.map((entry) => (
-          <button
-            key={entry.character}
-            onClick={() => setSelectedBroadHanzi(entry)}
-            className="group relative p-4 border-2 rounded-lg transition-all hover:shadow-lg border-border bg-card hover:border-primary/50"
-          >
-            <div className="text-4xl mb-2 text-center">{entry.character}</div>
-            <div className="text-sm text-muted-foreground text-center">{entry.pinyin[0] ?? "—"}</div>
-            <div className="text-xs text-muted-foreground text-center mt-1 text-balance">
-              {entry.meanings[0] ?? "—"}
-            </div>
-            {(entry.strokeCount !== undefined || entry.radical) && (
-              <div className="text-xs text-muted-foreground text-center mt-2">
-                {entry.strokeCount !== undefined && `${entry.strokeCount} traços`}
-                {entry.strokeCount !== undefined && entry.radical && " · "}
-                {entry.radical && `Radical ${entry.radical}`}
+      <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+          {broadResults.map((entry) => (
+            <button
+              key={entry.character}
+              draggable
+              onDragStart={(event) => handleCardDragStart(event, entry)}
+              onDragEnd={() => setDragOverCategoryId(null)}
+              onClick={() => setSelectedBroadHanzi(entry)}
+              className="group relative p-4 border-2 rounded-lg transition-all hover:shadow-lg border-border bg-card hover:border-primary/50 cursor-grab active:cursor-grabbing"
+              aria-label={`Arraste ou abra ${entry.character}; leitura: ${entry.pinyin[0] ?? "não cadastrada"}; significado: ${entry.meanings[0] ?? "não cadastrado"}`}
+            >
+              <div className="text-4xl mb-2 text-center">{entry.character}</div>
+              <div className="text-sm text-muted-foreground text-center">
+                {entry.pinyin[0] ?? "Leitura não cadastrada"}
               </div>
-            )}
-          </button>
-        ))}
+              <div className="text-xs text-muted-foreground text-center mt-1 text-balance">
+                {entry.meanings[0] ?? "Significado não cadastrado"}
+              </div>
+              {(entry.strokeCount !== undefined || entry.radical) && (
+                <div className="text-xs text-muted-foreground text-center mt-2">
+                  {entry.strokeCount !== undefined && `${entry.strokeCount} traços`}
+                  {entry.strokeCount !== undefined && entry.radical && " · "}
+                  {entry.radical && `Radical ${entry.radical}`}
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+        {broadSearchLoading && <p className="text-sm text-muted-foreground">Carregando mais resultados...</p>}
+        {broadSearchError && <p className="text-sm text-destructive">Não foi possível carregar mais resultados.</p>}
+        {broadSearchHasMore && (
+          <Button type="button" variant="outline" onClick={loadMoreBroadResults} disabled={broadSearchLoading}>
+            Carregar mais resultados
+          </Button>
+        )}
       </div>
     )
   }
@@ -318,7 +512,7 @@ export function HanziCatalog({
         </div>
       )}
 
-      <header className="border-b border-border sticky top-0 bg-background z-10">
+      <header className="sticky top-0 bg-background z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
             <Button variant="ghost" onClick={onClose}>
@@ -340,7 +534,7 @@ export function HanziCatalog({
             <Input
               placeholder="Buscar por hanzi, pinyin ou significado..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(event) => handleLibrarySearchChange(event.target.value)}
               className="pl-10"
             />
           </div>
@@ -348,118 +542,157 @@ export function HanziCatalog({
       </header>
 
       <main className="container mx-auto px-4 py-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Filters - Left side */}
-            <div className="lg:w-64 order-1 lg:order-1">
-              <div className="lg:sticky lg:top-24">
-                <h3 className="text-lg font-semibold mb-3 hidden lg:block">Categorias</h3> {/* Added hidden lg:block */}
-                {/* Mobile carousel - Added from updates */}
-                <div className="lg:hidden overflow-x-auto pb-2 -mx-4 px-4">
-                  <TabsList className="inline-flex h-auto w-auto gap-2 bg-transparent">
-                    <TabsTrigger value="all" className="whitespace-nowrap">
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => {
+            if (searchTerm.trim()) {
+              activeTabBeforeSearchRef.current = value
+              setActiveTab("all")
+            } else {
+              setActiveTab(value)
+            }
+          }}
+        >
+          <div className="flex flex-col gap-5">
+            <h2 className="text-2xl font-bold">Todos os Hanzis</h2>
+            <div className="w-full">
+              <div>
+                <div className="pb-2">
+                  {customCategories.length > 0 && (
+                    <p className="mb-2 text-xs text-muted-foreground">Arraste um hanzi até uma categoria para adicioná-lo.</p>
+                  )}
+                  <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2 bg-transparent p-0">
+                    <TabsTrigger value="all" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Todos os Hanzis
                     </TabsTrigger>
-                    <TabsTrigger value="aulas" className="whitespace-nowrap">
-                      Básico 1
-                    </TabsTrigger>
-                    <TabsTrigger value="licao3" className="whitespace-nowrap">
+                    <TabsTrigger value="licao3" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Lição 3
                     </TabsTrigger>
-                    <TabsTrigger value="licao4" className="whitespace-nowrap">
+                    <TabsTrigger value="licao4" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Lição 4
                     </TabsTrigger>
-                    <TabsTrigger value="licao5" className="whitespace-nowrap">
+                    <TabsTrigger value="licao5" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Lição 5
                     </TabsTrigger>
-                    <TabsTrigger value="hsk1" className="whitespace-nowrap">
+                    <TabsTrigger value="hsk1" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       HSK 1
                     </TabsTrigger>
-                    <TabsTrigger value="hsk2" className="whitespace-nowrap">
+                    <TabsTrigger value="hsk2" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       HSK 2
                     </TabsTrigger>
-                    <TabsTrigger value="hsk3" className="whitespace-nowrap">
+                    <TabsTrigger value="hsk3" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       HSK 3
                     </TabsTrigger>
-                    <TabsTrigger value="hsk4" className="whitespace-nowrap">
+                    <TabsTrigger value="hsk4" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       HSK 4
                     </TabsTrigger>
-                    <TabsTrigger value="hsk5" className="whitespace-nowrap">
+                    <TabsTrigger value="hsk5" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       HSK 5
                     </TabsTrigger>
-                    <TabsTrigger value="hsk6" className="whitespace-nowrap">
+                    <TabsTrigger value="hsk6" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       HSK 6
                     </TabsTrigger>
-                    <TabsTrigger value="numbers" className="whitespace-nowrap">
+                    <TabsTrigger value="numbers" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Números
                     </TabsTrigger>
-                    <TabsTrigger value="colors" className="whitespace-nowrap">
+                    <TabsTrigger value="colors" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Cores
                     </TabsTrigger>
-                    <TabsTrigger value="family" className="whitespace-nowrap">
+                    <TabsTrigger value="family" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Família
                     </TabsTrigger>
-                    <TabsTrigger value="food" className="whitespace-nowrap">
+                    <TabsTrigger value="food" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Comida
                     </TabsTrigger>
-                    <TabsTrigger value="animals" className="whitespace-nowrap">
+                    <TabsTrigger value="animals" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Animais
                     </TabsTrigger>
-                    <TabsTrigger value="verbs" className="whitespace-nowrap">
+                    <TabsTrigger value="verbs" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Verbos
                     </TabsTrigger>
-                    <TabsTrigger value="adjectives" className="whitespace-nowrap">
+                    <TabsTrigger value="adjectives" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Adjetivos
                     </TabsTrigger>
-                    <TabsTrigger value="places" className="whitespace-nowrap">
+                    <TabsTrigger value="places" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Lugares
                     </TabsTrigger>
-                    <TabsTrigger value="professions" className="whitespace-nowrap">
+                    <TabsTrigger value="professions" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Profissões
                     </TabsTrigger>
-                    <TabsTrigger value="time" className="whitespace-nowrap">
+                    <TabsTrigger value="time" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Tempo
                     </TabsTrigger>
-                    <TabsTrigger value="weather" className="whitespace-nowrap">
+                    <TabsTrigger value="weather" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Clima
                     </TabsTrigger>
+                  </TabsList>
+                </div>
+                <div className="mt-3 flex items-center justify-between gap-3 px-1">
+                  <div className="flex items-center gap-2">
+                    <Star className="h-4 w-4 text-primary" />
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                      Minhas Categorias
+                    </h3>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={openCategoryModal} className="shrink-0 px-2">
+                    <FolderPlus className="mr-1 h-4 w-4" />
+                    Criar
+                  </Button>
+                </div>
+                {customCategories.length > 0 ? (
+                  <TabsList className="mt-2 flex h-auto w-full flex-wrap justify-start gap-2 bg-transparent p-0">
                     {customCategories.map((category) => (
                       <TabsTrigger
                         key={category.id}
                         value={`custom-${category.id}`}
-                        className="whitespace-nowrap gap-1.5"
+                        onDragOver={(event) => handleCategoryDragOver(event, category.id)}
+                        onDrop={(event) => handleCategoryDrop(event, category.id)}
+                        className={cn(
+                          "w-auto flex-none gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground",
+                          dragOverCategoryId === category.id && "bg-primary/15 ring-2 ring-primary",
+                        )}
+                        aria-label={`${category.name}, soltar hanzi para adicionar`}
                       >
                         <Star className="h-3.5 w-3.5" />
-                        {category.name}
+                        <span>{category.name}</span>
+                        <Badge variant="secondary" className="px-1.5 py-0 text-xs">{category.cards.length}</Badge>
                       </TabsTrigger>
                     ))}
                   </TabsList>
-                </div>
-                {/* Create category button - mobile */}
-                <div className="lg:hidden mb-2">
-                  <Button variant="outline" size="sm" onClick={openCategoryModal} className="bg-transparent">
-                    <FolderPlus className="h-4 w-4 mr-2" />
-                    Criar Categoria
-                  </Button>
-                </div>
+                ) : (
+                  <p className="px-1 pt-1 text-xs text-muted-foreground">Nenhuma categoria criada ainda.</p>
+                )}
                 {/* Custom categories - desktop */}
-                <div className="hidden lg:block mb-6">
-                  <div className="flex items-center gap-2 mb-2 px-1">
-                    <Star className="h-4 w-4 text-primary" />
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                      Minhas Categorias
-                    </h3>
+                <div className="hidden">
+                  <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Star className="h-4 w-4 shrink-0 text-primary" />
+                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                        Minhas Categorias
+                      </h3>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={openCategoryModal} className="shrink-0 px-2">
+                      <FolderPlus className="mr-1 h-4 w-4" />
+                      Criar
+                    </Button>
                   </div>
+                  {customCategories.length > 0 ? (
+                    <p className="px-1 pb-2 text-xs text-muted-foreground">Arraste um hanzi até uma categoria para adicioná-lo.</p>
+                  ) : null}
                   {customCategories.length > 0 ? (
                     <TabsList className="flex flex-col h-auto w-full gap-1 bg-transparent p-0">
                       {customCategories.map((category) => (
                         <TabsTrigger
                           key={category.id}
                           value={`custom-${category.id}`}
-                          className="w-full justify-start gap-2"
+                          onDragOver={(event) => handleCategoryDragOver(event, category.id)}
+                          onDrop={(event) => handleCategoryDrop(event, category.id)}
+                          className={cn("w-full justify-start gap-2", dragOverCategoryId === category.id && "bg-primary/15 ring-2 ring-primary")}
+                          aria-label={`${category.name}, soltar hanzi para adicionar`}
                         >
                           <Star className="h-3.5 w-3.5 shrink-0" />
                           <span className="truncate">{category.name}</span>
+                          <Badge variant="secondary" className="ml-auto shrink-0 px-1.5 py-0 text-xs">{category.cards.length}</Badge>
                         </TabsTrigger>
                       ))}
                     </TabsList>
@@ -468,24 +701,12 @@ export function HanziCatalog({
                       Nenhuma categoria criada ainda.
                     </p>
                   )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={openCategoryModal}
-                    className="w-full justify-start mt-2 bg-transparent"
-                  >
-                    <FolderPlus className="h-4 w-4 mr-2" />
-                    Criar Categoria
-                  </Button>
                 </div>
 
                 {/* Desktop sidebar - modified from existing */}
-                <TabsList className="hidden lg:flex flex-col h-auto w-full gap-1">
+                <TabsList className="hidden">
                   <TabsTrigger value="all" className="w-full justify-start">
                     Todos os Hanzis
-                  </TabsTrigger>
-                  <TabsTrigger value="aulas" className="w-full justify-start">
-                    Básico 1
                   </TabsTrigger>
                   <TabsTrigger value="licao3" className="w-full justify-start">
                     Lição 3
@@ -553,13 +774,12 @@ export function HanziCatalog({
             </div>
 
             {/* Hanzis Grid - Right side */}
-            <div className="flex-1 order-2 lg:order-2">
+            <div className="w-full">
               <TabsContent value="all" className="space-y-4 mt-0">
-                <h2 className="text-2xl font-bold">Todos os Hanzis</h2>
                 {renderBroadSearchResults()}
               </TabsContent>
 
-              {Object.entries(HANZI_CATALOG).map(([category, cards]) => (
+              {Object.entries(HANZI_CATALOG).filter(([category]) => category !== "aulas").map(([category, cards]) => (
                 <TabsContent key={category} value={category} className="space-y-4 mt-0">
                   <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-bold capitalize">
@@ -620,6 +840,96 @@ export function HanziCatalog({
                       </Button>
                     </div>
                   </div>
+
+                  <section className="flex flex-col gap-3 rounded-lg border border-border p-4" aria-label={`Adicionar hanzi à categoria ${category.name}`}>
+                    <div>
+                      <h3 className="font-semibold">Adicionar da biblioteca</h3>
+                      <p className="text-sm text-muted-foreground">Pesquise por hanzi, pinyin ou significado.</p>
+                    </div>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                      <Input
+                        aria-label={`Buscar hanzi para adicionar à categoria ${category.name}`}
+                        placeholder="Buscar na biblioteca..."
+                        value={customCategorySearch[category.id] ?? ""}
+                        onChange={(event) => handleCustomCategorySearchChange(category.id, event.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    {(() => {
+                      const query = (customCategorySearch[category.id] ?? "").trim()
+                      const matches = customCategorySearchResults[category.id] ?? []
+                      if (!query) return null
+                      if (customCategorySearchLoading[category.id] && matches.length === 0) {
+                        return <p className="text-sm text-muted-foreground">Buscando no catálogo completo...</p>
+                      }
+                      if (customCategorySearchError[category.id] && matches.length === 0) {
+                        return <p className="text-sm text-destructive">Não foi possível concluir a busca.</p>
+                      }
+                      if (matches.length === 0) {
+                        return <p className="text-sm text-muted-foreground">Nenhum hanzi encontrado na biblioteca.</p>
+                      }
+
+                      return (
+                        <div className="flex flex-col gap-3">
+                          <div className="max-h-80 overflow-y-auto rounded-md border border-border divide-y divide-border">
+                            {matches.map((entry) => {
+                              const alreadyInCategory = category.cards.some((item) => item.hanzi === entry.character)
+                              const card = {
+                                hanzi: entry.character,
+                                pinyin: entry.pinyin.join(", "),
+                                meaning: entry.meanings.join("; "),
+                              }
+                              return (
+                                <div
+                                  key={entry.character}
+                                  draggable
+                                  onDragStart={(event) => handleCardDragStart(event, entry)}
+                                  onDragEnd={() => setDragOverCategoryId(null)}
+                                  className="flex items-center justify-between gap-3 p-3 cursor-grab active:cursor-grabbing"
+                                >
+                                  <div className="flex min-w-0 items-center gap-3">
+                                    <span className="text-2xl" lang="zh">{entry.character}</span>
+                                    <span className="min-w-0">
+                                      <span className="block text-sm font-medium">
+                                        {entry.pinyin[0] ?? "Leitura não cadastrada"}
+                                      </span>
+                                      <span className="block truncate text-xs text-muted-foreground">
+                                        {entry.meanings[0] ?? "Significado não cadastrado"}
+                                      </span>
+                                    </span>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={alreadyInCategory ? "secondary" : "outline"}
+                                    disabled={alreadyInCategory}
+                                    onClick={() => addCardToCustomCategory(category.id, card)}
+                                  >
+                                    {alreadyInCategory ? <Check className="mr-1 h-4 w-4" /> : <Plus className="mr-1 h-4 w-4" />}
+                                    {alreadyInCategory ? "Adicionado" : "Adicionar"}
+                                  </Button>
+                                </div>
+                              )
+                            })}
+                          </div>
+                          {customCategorySearchLoading[category.id] && <p className="text-sm text-muted-foreground">Carregando mais resultados...</p>}
+                          {customCategorySearchError[category.id] && <p className="text-sm text-destructive">Não foi possível carregar mais resultados.</p>}
+                          {customCategorySearchHasMore[category.id] && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={customCategorySearchLoading[category.id]}
+                              onClick={() => loadMoreCustomCategoryResults(category.id)}
+                            >
+                              Carregar mais resultados
+                            </Button>
+                          )}
+                        </div>
+                      )
+                    })()}
+                  </section>
 
                   {renderCardGrid(category.cards)}
                 </TabsContent>
@@ -752,7 +1062,9 @@ export function HanziCatalog({
                         </div>
                       )}
                       <div className="text-2xl">{card.hanzi}</div>
-                      <div className="text-xs text-muted-foreground truncate">{card.pinyin}</div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {card.pinyin || "Leitura não cadastrada"}
+                      </div>
                     </button>
                   )
                 })}

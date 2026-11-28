@@ -79,6 +79,7 @@ export interface HanziCharacterSearchOptions {
   radicalNumber?: number
   strokeCount?: number
   limit?: number
+  offset?: number
 }
 
 export type HanziCharacterSearchResult = Pick<

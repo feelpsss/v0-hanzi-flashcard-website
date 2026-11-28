@@ -2,10 +2,11 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Moon, Sun, BookOpen, Plus, Play, Download, Upload, Library, Trash2, X, FileText } from "lucide-react"
-import { FlashcardCreator } from "@/components/flashcard-creator"
+import { Input } from "@/components/ui/input"
+import { Moon, Sun, BookOpen, Plus, Play, Download, Upload, Library, Trash2, FileText, Search, LoaderCircle } from "lucide-react"
+import type { HanziCharacterSearchResult } from "@/lib/hanzi-character"
 import { StudyMode } from "@/components/study-mode"
 import { ResultsScreen } from "@/components/results-screen"
 import { HanziCatalog } from "@/components/hanzi-catalog"
@@ -13,13 +14,21 @@ import { HanziCatalog } from "@/components/hanzi-catalog"
 export default function HomePage() {
   const [darkMode, setDarkMode] = useState(false)
   const [studyMode, setStudyMode] = useState<"reading" | "writing">("reading")
-  const [view, setView] = useState<"home" | "create" | "study" | "results" | "catalog">("home")
+  const [view, setView] = useState<"home" | "study" | "results" | "catalog">("home")
   const [flashcards, setFlashcards] = useState<any[]>([])
+  const [hanziSearchQuery, setHanziSearchQuery] = useState("")
+  const [hanziSearchResults, setHanziSearchResults] = useState<HanziCharacterSearchResult[]>([])
+  const [isSearchingHanzi, setIsSearchingHanzi] = useState(false)
+  const [hasSearchedHanzi, setHasSearchedHanzi] = useState(false)
+  const [hanziSearchError, setHanziSearchError] = useState("")
+  const [hasMoreHanziSearchResults, setHasMoreHanziSearchResults] = useState(false)
+  const homeSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const homeSearchControllerRef = useRef<AbortController | null>(null)
+  const homeSearchRequestRef = useRef(0)
   const [customCategories, setCustomCategories] = useState<{ id: string; name: string; cards: any[] }[]>([])
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
   const [studyingErrors, setStudyingErrors] = useState(false)
   const [studyResults, setStudyResults] = useState<any>(null)
-  const [showCreateModal, setShowCreateModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null)
   const [showClearAllModal, setShowClearAllModal] = useState(false)
@@ -63,6 +72,11 @@ export default function HomePage() {
         setCustomCategories([])
       }
     }
+  }, [])
+
+  useEffect(() => () => {
+    if (homeSearchTimerRef.current) clearTimeout(homeSearchTimerRef.current)
+    homeSearchControllerRef.current?.abort()
   }, [])
 
   const toggleDarkMode = () => {
@@ -226,31 +240,79 @@ export default function HomePage() {
     handleSaveFlashcards(newCards)
   }
 
-  const handleCreateClick = () => {
-    setShowCreateModal(true)
+  const runHanziSearch = async (query: string, offset = 0, append = false) => {
+    const requestId = ++homeSearchRequestRef.current
+    homeSearchControllerRef.current?.abort()
+    const controller = new AbortController()
+    homeSearchControllerRef.current = controller
+    setIsSearchingHanzi(true)
+    setHanziSearchError("")
+
+    try {
+      const response = await fetch(
+        `/api/hanzi/search?q=${encodeURIComponent(query)}&limit=50&offset=${offset}`,
+        { signal: controller.signal },
+      )
+      if (!response.ok) throw new Error("Não foi possível pesquisar agora.")
+      const data = await response.json()
+      if (requestId !== homeSearchRequestRef.current) return
+      const results = Array.isArray(data.results) ? data.results : []
+      setHanziSearchResults((current) => append ? [...current, ...results] : results)
+      setHasMoreHanziSearchResults(Boolean(data.hasMore))
+      setHasSearchedHanzi(true)
+    } catch {
+      if (!controller.signal.aborted && requestId === homeSearchRequestRef.current) {
+        setHanziSearchError("Não foi possível pesquisar agora. Tente novamente.")
+        if (!append) {
+          setHanziSearchResults([])
+          setHasMoreHanziSearchResults(false)
+        }
+        setHasSearchedHanzi(true)
+      }
+    } finally {
+      if (requestId === homeSearchRequestRef.current) setIsSearchingHanzi(false)
+    }
   }
 
-  const handleManualCreate = () => {
-    setShowCreateModal(false)
-    setView("create")
+  const handleHanziSearchChange = (query: string) => {
+    setHanziSearchQuery(query)
+    if (homeSearchTimerRef.current) clearTimeout(homeSearchTimerRef.current)
+    homeSearchControllerRef.current?.abort()
+    homeSearchRequestRef.current += 1
+    setHanziSearchError("")
+    setHanziSearchResults([])
+    setHasMoreHanziSearchResults(false)
+    setHasSearchedHanzi(false)
+
+    const trimmedQuery = query.trim()
+    if (!trimmedQuery) {
+      setIsSearchingHanzi(false)
+      return
+    }
+
+    setIsSearchingHanzi(true)
+    homeSearchTimerRef.current = setTimeout(() => {
+      void runHanziSearch(trimmedQuery)
+    }, 140)
   }
 
-  const handleCatalogCreate = () => {
-    setShowCreateModal(false)
-    setView("catalog")
+  const loadMoreHanziSearchResults = () => {
+    if (!isSearchingHanzi && hasMoreHanziSearchResults) {
+      void runHanziSearch(hanziSearchQuery.trim(), hanziSearchResults.length, true)
+    }
   }
 
-  if (view === "create") {
-    return (
-      <FlashcardCreator
-        flashcards={flashcards}
-        onSave={handleSaveFlashcards}
-        onBack={() => setView("home")}
-        darkMode={darkMode}
-        onClearAll={handleClearAll}
-        onStartStudy={() => setView("study")}
-      />
-    )
+  const handleAddSearchResult = (result: HanziCharacterSearchResult) => {
+    if (flashcards.some((card) => card.hanzi === result.character)) return
+
+    handleSaveFlashcards([
+      ...flashcards,
+      {
+        hanzi: result.character,
+        pinyin: result.pinyin?.join(", ") ?? "",
+        meaning: result.meanings?.join("; ") ?? "",
+      },
+    ])
   }
 
   if (view === "study") {
@@ -346,25 +408,96 @@ export default function HomePage() {
       </header>
 
       <main className="container mx-auto px-4 py-12">
-        <div className="max-w-2xl mx-auto space-y-8">
-          <div className="text-center space-y-4">
+        <div className="mx-auto grid w-full max-w-6xl grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.38fr)] lg:items-start">
+          <div className="min-w-0 space-y-8">
+            <div className="text-center space-y-4 lg:text-left">
             <h2 className="text-4xl font-bold text-balance">Domine os Caracteres Chineses</h2>
             <p className="text-lg text-muted-foreground text-pretty">
-              Aprenda Hanzi de forma eficiente com flashcards interativos. Escolha caracteres do catálogo ou crie seus
-              próprios.
+              Aprenda Hanzi de forma eficiente com flashcards interativos. Pesquise e adicione caracteres direto à sua coleção.
             </p>
-          </div>
+            </div>
+
 
           <div className="border border-border rounded-lg p-6 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-xl font-semibold">Seus Flashcards</h3>
-              {flashcards.length > 0 && (
-                <Button variant="destructive" size="sm" onClick={handleClearAll}>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Limpar Tudo
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setView("catalog")}>
+                  <Library aria-hidden="true" className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Adicionar da biblioteca</span>
+                  <span className="sm:hidden">Biblioteca</span>
                 </Button>
-              )}
+                {flashcards.length > 0 && (
+                  <Button variant="destructive" size="sm" onClick={handleClearAll}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Limpar Tudo
+                  </Button>
+                )}
+              </div>
             </div>
+
+            <section className="flex flex-col gap-3 border-b border-border pb-5" aria-labelledby="hanzi-search-title">
+              <div>
+                <h4 id="hanzi-search-title" className="font-semibold">Adicionar Hanzi rapidamente</h4>
+                <p className="mt-1 text-sm text-muted-foreground">Pesquise por caractere, pinyin ou significado enquanto digita.</p>
+              </div>
+              <div className="relative">
+                <label htmlFor="home-hanzi-search" className="sr-only">Pesquisar Hanzi, pinyin ou significado</label>
+                <Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="home-hanzi-search"
+                  value={hanziSearchQuery}
+                  onChange={(event) => handleHanziSearchChange(event.target.value)}
+                  placeholder="Ex.: 水, shuǐ ou água"
+                  className="pl-9"
+                />
+              </div>
+              <div aria-live="polite" className="flex flex-col gap-3">
+                {isSearchingHanzi && (
+                  <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin" /> Buscando no catálogo completo...
+                  </p>
+                )}
+                {hanziSearchError && <p className="text-sm text-destructive">{hanziSearchError}</p>}
+                {hasSearchedHanzi && hanziSearchResults.length === 0 && !hanziSearchError && (
+                  <p className="text-sm text-muted-foreground">Nenhum Hanzi encontrado para essa busca.</p>
+                )}
+                {hanziSearchResults.length > 0 && (
+                  <ul className="grid max-h-96 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                    {hanziSearchResults.map((result) => {
+                      const alreadyAdded = flashcards.some((card) => card.hanzi === result.character)
+                      return (
+                        <li key={result.character} className="flex min-w-0 items-center justify-between gap-3 rounded-md border border-border p-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span lang="zh" className="text-3xl leading-none">{result.character}</span>
+                            <span className="min-w-0">
+                              <span className="block truncate text-sm font-medium">{result.pinyin?.join(", ") || "Pinyin indisponível"}</span>
+                              <span className="block truncate text-xs text-muted-foreground">{result.meanings?.join("; ") || "Significado indisponível"}</span>
+                            </span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant={alreadyAdded ? "secondary" : "outline"}
+                            size="sm"
+                            disabled={alreadyAdded}
+                            onClick={() => handleAddSearchResult(result)}
+                            aria-label={alreadyAdded ? `${result.character} já está nos flashcards` : `Adicionar ${result.character} aos flashcards`}
+                          >
+                            {alreadyAdded ? "Adicionado" : <><Plus aria-hidden="true" className="mr-1 h-4 w-4" />Adicionar</>}
+                          </Button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+                {hasMoreHanziSearchResults && (
+                  <Button type="button" variant="outline" size="sm" disabled={isSearchingHanzi} onClick={loadMoreHanziSearchResults}>
+                    {isSearchingHanzi && hanziSearchResults.length > 0 && <LoaderCircle aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />}
+                    Carregar mais resultados
+                  </Button>
+                )}
+              </div>
+            </section>
 
             {flashcards.length > 0 ? (
               <div className="space-y-4">
@@ -398,7 +531,7 @@ export default function HomePage() {
               <div className="py-12 text-center text-muted-foreground space-y-2">
                 <FileText className="h-12 w-12 mx-auto opacity-50" />
                 <p className="text-sm">Nenhum flashcard adicionado ainda</p>
-                <p className="text-xs">Comece criando seus flashcards abaixo</p>
+                  <p className="text-xs">Pesquise um caractere acima para começar</p>
               </div>
             )}
 
@@ -474,17 +607,17 @@ export default function HomePage() {
               <input id="import-input" type="file" accept=".json" onChange={handleImport} className="hidden" />
             </div>
           </div>
+          </div>
 
-
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
             <Button
-              onClick={handleCreateClick}
+              onClick={() => setView("catalog")}
               className="h-32 flex flex-col gap-2 text-lg bg-transparent"
               variant="outline"
             >
-              <Plus className="h-8 w-8" />
-              <span>Criar Flashcards</span>
-              <span className="text-xs text-muted-foreground">Adicione caracteres</span>
+              <Library className="h-8 w-8" />
+              <span>Biblioteca</span>
+              <span className="text-xs text-muted-foreground">Explore todos os Hanzis</span>
             </Button>
 
             <Button
@@ -518,57 +651,6 @@ export default function HomePage() {
               <Button onClick={confirmImport} variant="destructive" className="flex-1">
                 Confirmar Importação
               </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card border-2 border-border rounded-xl p-8 max-w-2xl w-full shadow-2xl relative">
-            <button
-              onClick={() => setShowCreateModal(false)}
-              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Fechar"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <div className="space-y-2 mb-6">
-              <h3 className="text-2xl font-bold">Como deseja adicionar flashcards?</h3>
-              <p className="text-muted-foreground">Escolha entre criar manualmente ou selecionar do catálogo</p>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <button
-                onClick={handleManualCreate}
-                className="group border-2 border-border hover:border-primary rounded-lg p-6 space-y-4 transition-all hover:shadow-lg bg-card"
-              >
-                <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                  <Plus className="h-8 w-8 text-primary" />
-                </div>
-                <div className="space-y-2">
-                  <h4 className="text-xl font-semibold">Adicionar Manualmente</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Digite o pinyin e selecione os caracteres com autocomplete
-                  </p>
-                </div>
-              </button>
-
-              <button
-                onClick={handleCatalogCreate}
-                className="group border-2 border-border hover:border-primary rounded-lg p-6 space-y-4 transition-all hover:shadow-lg bg-card"
-              >
-                <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                  <Library className="h-8 w-8 text-primary" />
-                </div>
-                <div className="space-y-2">
-                  <h4 className="text-xl font-semibold">Selecionar do Catálogo</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Escolha entre mais de 1000 caracteres organizados por categoria
-                  </p>
-                </div>
-              </button>
             </div>
           </div>
         </div>
