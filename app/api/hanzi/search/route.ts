@@ -15,13 +15,15 @@ export async function GET(request: NextRequest) {
   const query = params.get("q")?.trim() ?? ""
   const requestedLimit = optionalInteger(params.get("limit")) ?? 50
   const limit = Math.max(1, Math.min(requestedLimit, 100))
+  const offset = optionalInteger(params.get("offset")) ?? 0
   const radicalNumber = optionalInteger(params.get("radical") ?? params.get("radicalNumber"))
   const strokeCount = optionalInteger(params.get("strokeCount"))
 
-  if (!query) return NextResponse.json({ results: [] })
+  if (!query) return NextResponse.json({ results: [], hasMore: false })
 
-  const matches = await searchHanziCharacters({ query, limit, radicalNumber, strokeCount })
-  const results = matches.map(({
+  const matches = await searchHanziCharacters({ query, limit: Math.min(limit + 1, 100), offset, radicalNumber, strokeCount })
+  const hasMore = matches.length > limit
+  const results = matches.slice(0, limit).map(({
     character,
     unicode,
     pinyin,
@@ -44,5 +46,8 @@ export async function GET(request: NextRequest) {
     simplified,
     traditional,
   }))
-  return NextResponse.json({ results })
+  return NextResponse.json(
+    { results, hasMore },
+    { headers: { "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=600" } },
+  )
 }

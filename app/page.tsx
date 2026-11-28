@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Moon, Sun, BookOpen, Plus, Play, Download, Upload, Library, Trash2, FileText, Search, LoaderCircle } from "lucide-react"
@@ -21,6 +21,10 @@ export default function HomePage() {
   const [isSearchingHanzi, setIsSearchingHanzi] = useState(false)
   const [hasSearchedHanzi, setHasSearchedHanzi] = useState(false)
   const [hanziSearchError, setHanziSearchError] = useState("")
+  const [hasMoreHanziSearchResults, setHasMoreHanziSearchResults] = useState(false)
+  const homeSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const homeSearchControllerRef = useRef<AbortController | null>(null)
+  const homeSearchRequestRef = useRef(0)
   const [customCategories, setCustomCategories] = useState<{ id: string; name: string; cards: any[] }[]>([])
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
   const [studyingErrors, setStudyingErrors] = useState(false)
@@ -68,6 +72,11 @@ export default function HomePage() {
         setCustomCategories([])
       }
     }
+  }, [])
+
+  useEffect(() => () => {
+    if (homeSearchTimerRef.current) clearTimeout(homeSearchTimerRef.current)
+    homeSearchControllerRef.current?.abort()
   }, [])
 
   const toggleDarkMode = () => {
@@ -231,27 +240,65 @@ export default function HomePage() {
     handleSaveFlashcards(newCards)
   }
 
-  const handleHanziSearch = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const query = hanziSearchQuery.trim()
-    if (!query) return
-
+  const runHanziSearch = async (query: string, offset = 0, append = false) => {
+    const requestId = ++homeSearchRequestRef.current
+    homeSearchControllerRef.current?.abort()
+    const controller = new AbortController()
+    homeSearchControllerRef.current = controller
     setIsSearchingHanzi(true)
     setHanziSearchError("")
-    setHanziSearchResults([])
-    setHasSearchedHanzi(false)
 
     try {
-      const response = await fetch(`/api/hanzi/search?q=${encodeURIComponent(query)}&limit=12`)
+      const response = await fetch(
+        `/api/hanzi/search?q=${encodeURIComponent(query)}&limit=50&offset=${offset}`,
+        { signal: controller.signal },
+      )
       if (!response.ok) throw new Error("Não foi possível pesquisar agora.")
       const data = await response.json()
-      setHanziSearchResults(Array.isArray(data.results) ? data.results : [])
+      if (requestId !== homeSearchRequestRef.current) return
+      const results = Array.isArray(data.results) ? data.results : []
+      setHanziSearchResults((current) => append ? [...current, ...results] : results)
+      setHasMoreHanziSearchResults(Boolean(data.hasMore))
       setHasSearchedHanzi(true)
     } catch {
-      setHanziSearchError("Não foi possível pesquisar agora. Tente novamente.")
-      setHanziSearchResults([])
+      if (!controller.signal.aborted && requestId === homeSearchRequestRef.current) {
+        setHanziSearchError("Não foi possível pesquisar agora. Tente novamente.")
+        if (!append) {
+          setHanziSearchResults([])
+          setHasMoreHanziSearchResults(false)
+        }
+        setHasSearchedHanzi(true)
+      }
     } finally {
+      if (requestId === homeSearchRequestRef.current) setIsSearchingHanzi(false)
+    }
+  }
+
+  const handleHanziSearchChange = (query: string) => {
+    setHanziSearchQuery(query)
+    if (homeSearchTimerRef.current) clearTimeout(homeSearchTimerRef.current)
+    homeSearchControllerRef.current?.abort()
+    homeSearchRequestRef.current += 1
+    setHanziSearchError("")
+    setHanziSearchResults([])
+    setHasMoreHanziSearchResults(false)
+    setHasSearchedHanzi(false)
+
+    const trimmedQuery = query.trim()
+    if (!trimmedQuery) {
       setIsSearchingHanzi(false)
+      return
+    }
+
+    setIsSearchingHanzi(true)
+    homeSearchTimerRef.current = setTimeout(() => {
+      void runHanziSearch(trimmedQuery)
+    }, 140)
+  }
+
+  const loadMoreHanziSearchResults = () => {
+    if (!isSearchingHanzi && hasMoreHanziSearchResults) {
+      void runHanziSearch(hanziSearchQuery.trim(), hanziSearchResults.length, true)
     }
   }
 
@@ -370,36 +417,53 @@ export default function HomePage() {
             </p>
             </div>
 
-            <section className="rounded-lg border border-border bg-card p-5 sm:p-6" aria-labelledby="hanzi-search-title">
-              <div className="mb-4">
-                <h3 id="hanzi-search-title" className="text-lg font-semibold">Adicionar Hanzi rapidamente</h3>
-                <p className="mt-1 text-sm text-muted-foreground">Pesquise por caractere, pinyin ou significado e adicione direto aos seus flashcards.</p>
-              </div>
-              <form onSubmit={handleHanziSearch} className="flex flex-col gap-2 sm:flex-row">
-                <label htmlFor="home-hanzi-search" className="sr-only">Pesquisar Hanzi, pinyin ou significado</label>
-                <div className="relative min-w-0 flex-1">
-                  <Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="home-hanzi-search"
-                    value={hanziSearchQuery}
-                    onChange={(event) => setHanziSearchQuery(event.target.value)}
-                    placeholder="Ex.: 水, shuǐ ou água"
-                    className="pl-9"
-                  />
-                </div>
-                <Button type="submit" disabled={!hanziSearchQuery.trim() || isSearchingHanzi}>
-                  {isSearchingHanzi ? <LoaderCircle aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" /> : <Search aria-hidden="true" className="mr-2 h-4 w-4" />}
-                  Pesquisar
-                </Button>
-              </form>
 
-              <div className="mt-4" aria-live="polite">
+          <div className="border border-border rounded-lg p-6 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="text-xl font-semibold">Seus Flashcards</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setView("catalog")}>
+                  <Library aria-hidden="true" className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Adicionar da biblioteca</span>
+                  <span className="sm:hidden">Biblioteca</span>
+                </Button>
+                {flashcards.length > 0 && (
+                  <Button variant="destructive" size="sm" onClick={handleClearAll}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Limpar Tudo
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <section className="flex flex-col gap-3 border-b border-border pb-5" aria-labelledby="hanzi-search-title">
+              <div>
+                <h4 id="hanzi-search-title" className="font-semibold">Adicionar Hanzi rapidamente</h4>
+                <p className="mt-1 text-sm text-muted-foreground">Pesquise por caractere, pinyin ou significado enquanto digita.</p>
+              </div>
+              <div className="relative">
+                <label htmlFor="home-hanzi-search" className="sr-only">Pesquisar Hanzi, pinyin ou significado</label>
+                <Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="home-hanzi-search"
+                  value={hanziSearchQuery}
+                  onChange={(event) => handleHanziSearchChange(event.target.value)}
+                  placeholder="Ex.: 水, shuǐ ou água"
+                  className="pl-9"
+                />
+              </div>
+              <div aria-live="polite" className="flex flex-col gap-3">
+                {isSearchingHanzi && (
+                  <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin" /> Buscando no catálogo completo...
+                  </p>
+                )}
                 {hanziSearchError && <p className="text-sm text-destructive">{hanziSearchError}</p>}
                 {hasSearchedHanzi && hanziSearchResults.length === 0 && !hanziSearchError && (
                   <p className="text-sm text-muted-foreground">Nenhum Hanzi encontrado para essa busca.</p>
                 )}
                 {hanziSearchResults.length > 0 && (
-                  <ul className="grid gap-2 sm:grid-cols-2">
+                  <ul className="grid max-h-96 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
                     {hanziSearchResults.map((result) => {
                       const alreadyAdded = flashcards.some((card) => card.hanzi === result.character)
                       return (
@@ -426,26 +490,14 @@ export default function HomePage() {
                     })}
                   </ul>
                 )}
-              </div>
-            </section>
-
-          <div className="border border-border rounded-lg p-6 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h3 className="text-xl font-semibold">Seus Flashcards</h3>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setView("catalog")}>
-                  <Library aria-hidden="true" className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Adicionar da biblioteca</span>
-                  <span className="sm:hidden">Biblioteca</span>
-                </Button>
-                {flashcards.length > 0 && (
-                  <Button variant="destructive" size="sm" onClick={handleClearAll}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Limpar Tudo
+                {hasMoreHanziSearchResults && (
+                  <Button type="button" variant="outline" size="sm" disabled={isSearchingHanzi} onClick={loadMoreHanziSearchResults}>
+                    {isSearchingHanzi && hanziSearchResults.length > 0 && <LoaderCircle aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />}
+                    Carregar mais resultados
                   </Button>
                 )}
               </div>
-            </div>
+            </section>
 
             {flashcards.length > 0 ? (
               <div className="space-y-4">
