@@ -106,6 +106,13 @@ export async function getHanziCharacter(character: string): Promise<HanziCharact
   return (await loadCharacterIndex()).get(character)
 }
 
+export async function listHanziCharacters({ limit = 50, offset = 0 }: { limit?: number; offset?: number } = {}): Promise<HanziCharacter[]> {
+  const { characters } = await loadHanziCharacterDataset()
+  const resultLimit = Math.max(1, Math.min(limit, 100))
+  const resultOffset = Math.max(0, Math.floor(offset))
+  return characters.slice(resultOffset, resultOffset + resultLimit + 1)
+}
+
 export async function searchHanziCharacters({
   query = "",
   radicalNumber,

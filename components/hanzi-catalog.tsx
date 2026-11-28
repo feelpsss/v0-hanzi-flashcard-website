@@ -31,7 +31,7 @@ export function HanziCatalog({
 }: HanziCatalogProps) {
   const [selectedCards, setSelectedCards] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [activeTab, setActiveTab] = useState("aulas")
+  const [activeTab, setActiveTab] = useState("all")
   const [snackbar, setSnackbar] = useState<{ message: string; visible: boolean }>({
     message: "",
     visible: false,
@@ -66,14 +66,28 @@ export function HanziCatalog({
   const [dragOverCategoryId, setDragOverCategoryId] = useState<string | null>(null)
 
   useEffect(() => {
+    let savedCategories: { id: string; name: string; cards: any[] }[] = []
     const saved = localStorage.getItem("customHanziCategories")
     if (saved) {
       try {
-        setCustomCategories(JSON.parse(saved))
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed)) savedCategories = parsed
       } catch {
         // ignore corrupted data
       }
     }
+
+    if (localStorage.getItem("basic-one-category-migrated") !== "true") {
+      const legacyCards = HANZI_CATALOG.aulas ?? []
+      if (legacyCards.length > 0 && !savedCategories.some((category) => category.name === "Básico 1")) {
+        savedCategories = [...savedCategories, { id: "cat-basic-one", name: "Básico 1", cards: legacyCards }]
+        localStorage.setItem("customHanziCategories", JSON.stringify(savedCategories))
+      }
+      localStorage.setItem("basic-one-category-migrated", "true")
+    }
+
+    setCustomCategories(savedCategories)
+    void runBroadSearch("")
   }, [])
 
   useEffect(() => () => {
@@ -126,9 +140,11 @@ export function HanziCatalog({
 
     const query = value.trim()
     if (!query) {
-      setBroadSearchLoading(false)
-      if (activeTabBeforeSearchRef.current) setActiveTab(activeTabBeforeSearchRef.current)
+      const previousTab = activeTabBeforeSearchRef.current
+      if (previousTab) setActiveTab(previousTab)
       activeTabBeforeSearchRef.current = null
+      if (!previousTab || previousTab === "all") void runBroadSearch("")
+      else setBroadSearchLoading(false)
       return
     }
 
@@ -429,9 +445,6 @@ export function HanziCatalog({
   )
 
   const renderBroadSearchResults = () => {
-    if (!searchTerm.trim()) {
-      return <p className="text-muted-foreground">Digite um hanzi, pinyin, significado ou código Unicode para buscar.</p>
-    }
     if (broadSearchError && broadResults.length === 0) return <p className="text-muted-foreground">Não foi possível concluir a busca.</p>
     if (broadResults.length === 0 && broadSearchLoading) return <p className="text-muted-foreground">Buscando no catálogo completo...</p>
     if (broadResults.length === 0) return <p className="text-muted-foreground">Nenhum hanzi encontrado.</p>
@@ -547,9 +560,6 @@ export function HanziCatalog({
                   <TabsList className="inline-flex h-auto w-auto gap-2 bg-transparent">
                     <TabsTrigger value="all" className="whitespace-nowrap">
                       Todos os Hanzis
-                    </TabsTrigger>
-                    <TabsTrigger value="aulas" className="whitespace-nowrap">
-                      Básico 1
                     </TabsTrigger>
                     <TabsTrigger value="licao3" className="whitespace-nowrap">
                       Lição 3
@@ -683,9 +693,6 @@ export function HanziCatalog({
                   <TabsTrigger value="all" className="w-full justify-start">
                     Todos os Hanzis
                   </TabsTrigger>
-                  <TabsTrigger value="aulas" className="w-full justify-start">
-                    Básico 1
-                  </TabsTrigger>
                   <TabsTrigger value="licao3" className="w-full justify-start">
                     Lição 3
                   </TabsTrigger>
@@ -758,7 +765,7 @@ export function HanziCatalog({
                 {renderBroadSearchResults()}
               </TabsContent>
 
-              {Object.entries(HANZI_CATALOG).map(([category, cards]) => (
+              {Object.entries(HANZI_CATALOG).filter(([category]) => category !== "aulas").map(([category, cards]) => (
                 <TabsContent key={category} value={category} className="space-y-4 mt-0">
                   <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-bold capitalize">
