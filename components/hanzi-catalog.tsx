@@ -646,11 +646,17 @@ export function HanziCatalog({
                 </div>
                 {/* Custom categories - desktop */}
                 <div className="hidden lg:block mb-6">
-                  <div className="flex items-center gap-2 mb-2 px-1">
-                    <Star className="h-4 w-4 text-primary" />
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                      Minhas Categorias
-                    </h3>
+                  <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Star className="h-4 w-4 shrink-0 text-primary" />
+                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                        Minhas Categorias
+                      </h3>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={openCategoryModal} className="shrink-0 px-2">
+                      <FolderPlus className="mr-1 h-4 w-4" />
+                      Criar
+                    </Button>
                   </div>
                   {customCategories.length > 0 ? (
                     <p className="px-1 pb-2 text-xs text-muted-foreground">Arraste um hanzi até uma categoria para adicioná-lo.</p>
@@ -677,15 +683,6 @@ export function HanziCatalog({
                       Nenhuma categoria criada ainda.
                     </p>
                   )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={openCategoryModal}
-                    className="w-full justify-start mt-2 bg-transparent"
-                  >
-                    <FolderPlus className="h-4 w-4 mr-2" />
-                    Criar Categoria
-                  </Button>
                 </div>
 
                 {/* Desktop sidebar - modified from existing */}
