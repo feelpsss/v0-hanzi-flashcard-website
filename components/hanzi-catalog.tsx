@@ -512,7 +512,7 @@ export function HanziCatalog({
         </div>
       )}
 
-      <header className="border-b border-border sticky top-0 bg-background z-10">
+      <header className="sticky top-0 bg-background z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
             <Button variant="ghost" onClick={onClose}>
