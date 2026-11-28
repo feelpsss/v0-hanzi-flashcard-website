@@ -547,87 +547,104 @@ export function HanziCatalog({
             }
           }}
         >
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Filters - Left side */}
-            <div className="lg:w-64 order-1 lg:order-1">
-              <div className="lg:sticky lg:top-24">
-                <h3 className="text-lg font-semibold mb-3 hidden lg:block">Categorias</h3> {/* Added hidden lg:block */}
-                {/* Mobile carousel - Added from updates */}
-                <div className="lg:hidden overflow-x-auto pb-2 -mx-4 px-4">
+          <div className="flex flex-col gap-5">
+            <h2 className="text-2xl font-bold">Todos os Hanzis</h2>
+            <div className="w-full">
+              <div>
+                <div className="pb-2">
                   {customCategories.length > 0 && (
                     <p className="mb-2 text-xs text-muted-foreground">Arraste um hanzi até uma categoria para adicioná-lo.</p>
                   )}
-                  <TabsList className="inline-flex h-auto w-auto gap-2 bg-transparent">
-                    <TabsTrigger value="all" className="whitespace-nowrap">
+                  <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2 bg-transparent p-0">
+                    <TabsTrigger value="all" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Todos os Hanzis
                     </TabsTrigger>
-                    <TabsTrigger value="licao3" className="whitespace-nowrap">
+                    <TabsTrigger value="licao3" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Lição 3
                     </TabsTrigger>
-                    <TabsTrigger value="licao4" className="whitespace-nowrap">
+                    <TabsTrigger value="licao4" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Lição 4
                     </TabsTrigger>
-                    <TabsTrigger value="licao5" className="whitespace-nowrap">
+                    <TabsTrigger value="licao5" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Lição 5
                     </TabsTrigger>
-                    <TabsTrigger value="hsk1" className="whitespace-nowrap">
+                    <TabsTrigger value="hsk1" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       HSK 1
                     </TabsTrigger>
-                    <TabsTrigger value="hsk2" className="whitespace-nowrap">
+                    <TabsTrigger value="hsk2" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       HSK 2
                     </TabsTrigger>
-                    <TabsTrigger value="hsk3" className="whitespace-nowrap">
+                    <TabsTrigger value="hsk3" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       HSK 3
                     </TabsTrigger>
-                    <TabsTrigger value="hsk4" className="whitespace-nowrap">
+                    <TabsTrigger value="hsk4" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       HSK 4
                     </TabsTrigger>
-                    <TabsTrigger value="hsk5" className="whitespace-nowrap">
+                    <TabsTrigger value="hsk5" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       HSK 5
                     </TabsTrigger>
-                    <TabsTrigger value="hsk6" className="whitespace-nowrap">
+                    <TabsTrigger value="hsk6" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       HSK 6
                     </TabsTrigger>
-                    <TabsTrigger value="numbers" className="whitespace-nowrap">
+                    <TabsTrigger value="numbers" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Números
                     </TabsTrigger>
-                    <TabsTrigger value="colors" className="whitespace-nowrap">
+                    <TabsTrigger value="colors" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Cores
                     </TabsTrigger>
-                    <TabsTrigger value="family" className="whitespace-nowrap">
+                    <TabsTrigger value="family" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Família
                     </TabsTrigger>
-                    <TabsTrigger value="food" className="whitespace-nowrap">
+                    <TabsTrigger value="food" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Comida
                     </TabsTrigger>
-                    <TabsTrigger value="animals" className="whitespace-nowrap">
+                    <TabsTrigger value="animals" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Animais
                     </TabsTrigger>
-                    <TabsTrigger value="verbs" className="whitespace-nowrap">
+                    <TabsTrigger value="verbs" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Verbos
                     </TabsTrigger>
-                    <TabsTrigger value="adjectives" className="whitespace-nowrap">
+                    <TabsTrigger value="adjectives" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Adjetivos
                     </TabsTrigger>
-                    <TabsTrigger value="places" className="whitespace-nowrap">
+                    <TabsTrigger value="places" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Lugares
                     </TabsTrigger>
-                    <TabsTrigger value="professions" className="whitespace-nowrap">
+                    <TabsTrigger value="professions" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Profissões
                     </TabsTrigger>
-                    <TabsTrigger value="time" className="whitespace-nowrap">
+                    <TabsTrigger value="time" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Tempo
                     </TabsTrigger>
-                    <TabsTrigger value="weather" className="whitespace-nowrap">
+                    <TabsTrigger value="weather" className="w-auto flex-none whitespace-nowrap rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                       Clima
                     </TabsTrigger>
+                  </TabsList>
+                </div>
+                <div className="mt-3 flex items-center justify-between gap-3 px-1">
+                  <div className="flex items-center gap-2">
+                    <Star className="h-4 w-4 text-primary" />
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                      Minhas Categorias
+                    </h3>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={openCategoryModal} className="shrink-0 px-2">
+                    <FolderPlus className="mr-1 h-4 w-4" />
+                    Criar
+                  </Button>
+                </div>
+                {customCategories.length > 0 ? (
+                  <TabsList className="mt-2 flex h-auto w-full flex-wrap justify-start gap-2 bg-transparent p-0">
                     {customCategories.map((category) => (
                       <TabsTrigger
                         key={category.id}
                         value={`custom-${category.id}`}
                         onDragOver={(event) => handleCategoryDragOver(event, category.id)}
                         onDrop={(event) => handleCategoryDrop(event, category.id)}
-                        className={cn("whitespace-nowrap gap-1.5", dragOverCategoryId === category.id && "bg-primary/15 ring-2 ring-primary")}
+                        className={cn(
+                          "w-auto flex-none gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground",
+                          dragOverCategoryId === category.id && "bg-primary/15 ring-2 ring-primary",
+                        )}
                         aria-label={`${category.name}, soltar hanzi para adicionar`}
                       >
                         <Star className="h-3.5 w-3.5" />
@@ -636,16 +653,11 @@ export function HanziCatalog({
                       </TabsTrigger>
                     ))}
                   </TabsList>
-                </div>
-                {/* Create category button - mobile */}
-                <div className="lg:hidden mb-2">
-                  <Button variant="outline" size="sm" onClick={openCategoryModal} className="bg-transparent">
-                    <FolderPlus className="h-4 w-4 mr-2" />
-                    Criar Categoria
-                  </Button>
-                </div>
+                ) : (
+                  <p className="px-1 pt-1 text-xs text-muted-foreground">Nenhuma categoria criada ainda.</p>
+                )}
                 {/* Custom categories - desktop */}
-                <div className="hidden lg:block mb-6">
+                <div className="hidden">
                   <div className="mb-2 flex items-center justify-between gap-2 px-1">
                     <div className="flex min-w-0 items-center gap-2">
                       <Star className="h-4 w-4 shrink-0 text-primary" />
@@ -686,7 +698,7 @@ export function HanziCatalog({
                 </div>
 
                 {/* Desktop sidebar - modified from existing */}
-                <TabsList className="hidden lg:flex flex-col h-auto w-full gap-1">
+                <TabsList className="hidden">
                   <TabsTrigger value="all" className="w-full justify-start">
                     Todos os Hanzis
                   </TabsTrigger>
@@ -756,9 +768,8 @@ export function HanziCatalog({
             </div>
 
             {/* Hanzis Grid - Right side */}
-            <div className="flex-1 order-2 lg:order-2">
+            <div className="w-full">
               <TabsContent value="all" className="space-y-4 mt-0">
-                <h2 className="text-2xl font-bold">Todos os Hanzis</h2>
                 {renderBroadSearchResults()}
               </TabsContent>
 
