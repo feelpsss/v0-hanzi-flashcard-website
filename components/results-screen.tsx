@@ -66,8 +66,8 @@ export function ResultsScreen({ results, onRestart, onRestartErrors, onHome }: R
           <div style="display: flex; align-items: center; gap: 12px; padding: 8px; background-color: ${isDark ? "#262626" : "#ffffff"}; border-radius: 4px; margin-bottom: 8px;">
             <div style="font-size: 24px;">${card.hanzi}</div>
             <div style="font-size: 14px;">
-              ${card.pinyin ? `<div style="color: ${isDark ? "#a3a3a3" : "#737373"};">${card.pinyin}</div>` : ""}
-              <div style="color: ${isDark ? "#fafafa" : "#262626"};">${card.meaning}</div>
+              <div style="color: ${isDark ? "#a3a3a3" : "#737373"};">${card.pinyin || "Leitura não cadastrada"}</div>
+              <div style="color: ${isDark ? "#fafafa" : "#262626"};">${card.meaning || "Significado não cadastrado"}</div>
             </div>
           </div>
         `
@@ -214,8 +214,10 @@ export function ResultsScreen({ results, onRestart, onRestartErrors, onHome }: R
                     <div key={index} className="flex items-center gap-3 p-2 bg-background rounded">
                       <div className="text-2xl">{card.hanzi}</div>
                       <div className="text-sm">
-                        {card.pinyin && <div className="text-muted-foreground">{card.pinyin}</div>}
-                        <div>{card.meaning}</div>
+                        <div className="text-muted-foreground">
+                          {card.pinyin || "Leitura não cadastrada"}
+                        </div>
+                        <div>{card.meaning || "Significado não cadastrado"}</div>
                       </div>
                     </div>
                   ))
@@ -236,8 +238,10 @@ export function ResultsScreen({ results, onRestart, onRestartErrors, onHome }: R
                     <div key={index} className="flex items-center gap-3 p-2 bg-background rounded">
                       <div className="text-2xl">{card.hanzi}</div>
                       <div className="text-sm">
-                        {card.pinyin && <div className="text-muted-foreground">{card.pinyin}</div>}
-                        <div>{card.meaning}</div>
+                        <div className="text-muted-foreground">
+                          {card.pinyin || "Leitura não cadastrada"}
+                        </div>
+                        <div>{card.meaning || "Significado não cadastrado"}</div>
                       </div>
                     </div>
                   ))
@@ -255,8 +259,10 @@ export function ResultsScreen({ results, onRestart, onRestartErrors, onHome }: R
                     <div key={index} className="flex items-center gap-3 p-2 bg-background rounded">
                       <div className="text-2xl">{card.hanzi}</div>
                       <div className="text-sm">
-                        {card.pinyin && <div className="text-muted-foreground">{card.pinyin}</div>}
-                        <div>{card.meaning}</div>
+                        <div className="text-muted-foreground">
+                          {card.pinyin || "Leitura não cadastrada"}
+                        </div>
+                        <div>{card.meaning || "Significado não cadastrado"}</div>
                       </div>
                     </div>
                   ))}

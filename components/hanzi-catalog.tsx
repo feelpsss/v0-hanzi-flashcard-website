@@ -430,8 +430,12 @@ export function HanziCatalog({
               <X className="h-3 w-3 hidden group-hover:block" />
             </div>
             <div className="text-4xl mb-2 text-center">{card.hanzi}</div>
-            <div className="text-sm text-muted-foreground text-center">{card.pinyin}</div>
-            <div className="text-xs text-muted-foreground text-center mt-1 text-balance">{card.meaning}</div>
+            <div className="text-sm text-muted-foreground text-center">
+              {card.pinyin.trim() || "Leitura não cadastrada"}
+            </div>
+            <div className="text-xs text-muted-foreground text-center mt-1 text-balance">
+              {card.meaning.trim() || "Significado não cadastrado"}
+            </div>
             {alreadyAdded && (
               <div className="text-xs text-green-600 dark:text-green-400 group-hover:text-red-600 dark:group-hover:text-red-400 font-semibold text-center mt-2 transition-colors">
                 <span className="group-hover:hidden">Adicionado</span>
@@ -460,12 +464,14 @@ export function HanziCatalog({
               onDragEnd={() => setDragOverCategoryId(null)}
               onClick={() => setSelectedBroadHanzi(entry)}
               className="group relative p-4 border-2 rounded-lg transition-all hover:shadow-lg border-border bg-card hover:border-primary/50 cursor-grab active:cursor-grabbing"
-              aria-label={`Arraste ou abra ${entry.character}, ${entry.pinyin[0] ?? ""}, ${entry.meanings[0] ?? ""}`}
+              aria-label={`Arraste ou abra ${entry.character}; leitura: ${entry.pinyin[0] ?? "não cadastrada"}; significado: ${entry.meanings[0] ?? "não cadastrado"}`}
             >
               <div className="text-4xl mb-2 text-center">{entry.character}</div>
-              <div className="text-sm text-muted-foreground text-center">{entry.pinyin[0] ?? "—"}</div>
+              <div className="text-sm text-muted-foreground text-center">
+                {entry.pinyin[0] ?? "Leitura não cadastrada"}
+              </div>
               <div className="text-xs text-muted-foreground text-center mt-1 text-balance">
-                {entry.meanings[0] ?? "—"}
+                {entry.meanings[0] ?? "Significado não cadastrado"}
               </div>
               {(entry.strokeCount !== undefined || entry.radical) && (
                 <div className="text-xs text-muted-foreground text-center mt-2">
@@ -885,8 +891,12 @@ export function HanziCatalog({
                                   <div className="flex min-w-0 items-center gap-3">
                                     <span className="text-2xl" lang="zh">{entry.character}</span>
                                     <span className="min-w-0">
-                                      <span className="block text-sm font-medium">{entry.pinyin[0] ?? "—"}</span>
-                                      <span className="block truncate text-xs text-muted-foreground">{entry.meanings[0] ?? "—"}</span>
+                                      <span className="block text-sm font-medium">
+                                        {entry.pinyin[0] ?? "Leitura não cadastrada"}
+                                      </span>
+                                      <span className="block truncate text-xs text-muted-foreground">
+                                        {entry.meanings[0] ?? "Significado não cadastrado"}
+                                      </span>
                                     </span>
                                   </div>
                                   <Button
@@ -1052,7 +1062,9 @@ export function HanziCatalog({
                         </div>
                       )}
                       <div className="text-2xl">{card.hanzi}</div>
-                      <div className="text-xs text-muted-foreground truncate">{card.pinyin}</div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {card.pinyin || "Leitura não cadastrada"}
+                      </div>
                     </button>
                   )
                 })}
